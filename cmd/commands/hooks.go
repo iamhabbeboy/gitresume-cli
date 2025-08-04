@@ -1,17 +1,21 @@
 package commands
 
 import (
-	// "fmt"
-	"fmt"
+	"log"
 	"os"
 	"strings"
 
 	"github.com/iamhabbeboy/devcommit/config"
+	"github.com/iamhabbeboy/devcommit/internal/database"
 	"github.com/iamhabbeboy/devcommit/internal/git"
 )
 
 type Hook struct {
 }
+
+var (
+	bucketName = "git-commits"
+)
 
 func SetupHook() error {
 	project, err := os.Getwd() // get the current directory
@@ -47,6 +51,12 @@ func SeedHook() error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(logs)
-	return nil
+
+	database.Init()
+	defer database.Close()
+	err = database.Save(bucketName, "commits", logs)
+	var gc []git.GitCommit
+	res := database.Load(bucketName, "commits", &gc)
+	log.Print(res)
+	return err
 }
