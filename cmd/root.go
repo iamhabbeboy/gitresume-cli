@@ -27,7 +27,7 @@ var rootCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(initCmd)
-	// rootCmd.AddCommand(summaryCmd)
+	rootCmd.AddCommand(seedCmd)
 	// rootCmd.AddCommand(reportCmd)
 }
 
@@ -41,6 +41,21 @@ var initCmd = &cobra.Command{
 		} else {
 			fmt.Println("Successfully added")
 		}
+	},
+}
+
+var seedCmd = &cobra.Command{
+	Use:   "seed",
+	Short: "Seed your commits log",
+	Run: func(cmd *cobra.Command, args []string) {
+		err := commands.SeedHook()
+		if err != nil {
+			fmt.Println("Failed to add project:", err)
+		} else {
+			fmt.Println("Successfully seeded")
+		}
+		// report := storage.GenerateWeeklyReport()
+		// fmt.Println("\n--- Weekly Report ---\n", report)
 	},
 }
 

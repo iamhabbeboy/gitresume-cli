@@ -6,7 +6,6 @@ import (
 )
 
 func main() {
-	// conf := config.GetConfig()
 	cmd.Execute()
 	// if err != nil {
 	// 	os.Exit(1)

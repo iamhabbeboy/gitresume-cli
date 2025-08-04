@@ -2,7 +2,9 @@ package commands
 
 import (
 	// "fmt"
+	"fmt"
 	"os"
+	"strings"
 
 	"github.com/iamhabbeboy/devcommit/config"
 	"github.com/iamhabbeboy/devcommit/internal/git"
@@ -27,8 +29,8 @@ func SetupHook() error {
 		Name  string `mapstructure:"name"`
 		Email string `mapstructure:"email"`
 	}{
-		Name:  user.Name,
-		Email: user.Email,
+		Name:  strings.TrimSpace(user.Name),
+		Email: strings.TrimSpace(user.Email),
 	}
 
 	err = config.AddProject(project, u)
@@ -36,5 +38,15 @@ func SetupHook() error {
 		return err
 	}
 
+	return nil
+}
+
+func SeedHook() error {
+	gitutil := git.NewGitUtil("/Users/solomon/work/Golang-Project/git-tracker")
+	logs, err := gitutil.GetCommits()
+	if err != nil {
+		return err
+	}
+	fmt.Println(logs)
 	return nil
 }
