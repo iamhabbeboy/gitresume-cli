@@ -2,72 +2,73 @@ package database
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
-	"os"
-	"path/filepath"
 
 	bolt "go.etcd.io/bbolt"
 )
 
-var (
-	db       *bolt.DB
-	filePath = filepath.Join(os.Getenv("HOME"), ".devcommit", "data.db")
-)
-
-func Init() {
-	err := os.MkdirAll(filepath.Dir(filePath), os.ModePerm)
-	if err != nil {
-		log.Fatalf("failed to create db directory: %v", err)
-	}
-
-	dbInstance, err := bolt.Open(filePath, 0600, nil)
-	if err != nil {
-		log.Fatalf("failed to open db: %v", err)
-	}
-	db = dbInstance
+type Db struct {
+	Db   *bolt.DB
+	Name string
 }
 
-func Close() {
-	if db != nil {
-		db.Close()
-	}
+type KV struct {
+	Key   string
+	Value string
 }
 
-func Save(bucketName string, key string, value any) error {
-	data, err := json.Marshal(value)
+func New(path string, name string) *Db {
+	db, err := bolt.Open(path, 0600, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return &Db{Db: db, Name: name}
+}
+
+func (d *Db) Close() error {
+	return d.Db.Close()
+}
+
+/*
+* Storage approaches
+* 1. Key: project name, value: json(array of commits)
+* 2. Key: uuid, value: json(array of commits with the project name)
+ * 3. Key: uuid, value: single commit
+*/
+func (d *Db) Store(key string, data any) error {
+	buf, err := json.Marshal(data)
 	if err != nil {
 		return err
 	}
-
-	return db.Update(func(tx *bolt.Tx) error {
-		bucket, err := tx.CreateBucketIfNotExists([]byte(bucketName))
+	err = d.Db.Update(func(tx *bolt.Tx) error {
+		bucket, err := tx.CreateBucketIfNotExists([]byte(d.Name))
 		if err != nil {
 			return err
 		}
-		return bucket.Put([]byte(key), data)
+		return bucket.Put([]byte(key), buf)
 	})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func Load(bucketName string, key string, out any) error {
-	return db.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket([]byte(bucketName))
-		if bucket == nil {
-			return nil // not found
+func (d *Db) GetAll() (error, any) {
+	var result []KV
+	err := d.Db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(d.Name))
+		if b == nil {
+			return fmt.Errorf("bucket %s does not exist", d.Name)
 		}
-		data := bucket.Get([]byte(key))
-		if data == nil {
-			return nil // not found
+		c := b.Cursor()
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			result = append(result, KV{Key: string(k), Value: string(v)})
 		}
-		return json.Unmarshal(data, out)
+		return nil
 	})
-}
-
-func Delete(bucketName string, key string) error {
-	return db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket([]byte(bucketName))
-		if bucket == nil {
-			return nil // nothing to delete
-		}
-		return bucket.Delete([]byte(key))
-	})
+	if err != nil {
+		return err, nil
+	}
+	return nil, result
 }
