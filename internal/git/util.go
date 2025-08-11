@@ -53,7 +53,6 @@ func (g *GitUtil) GetUserInfo() (*GitUser, error) {
 }
 
 func (g *GitUtil) GetCommits() ([]GitCommit, error) {
-	// git log --pretty=format:"%h - %at - %an: %s" --author="iamhabbeboy"
 	logs, err := runGitCommand(g.Path, "log", "--pretty=format:%at=%s --author=iamhabbeboy")
 	if err != nil {
 		return nil, err
