@@ -5,16 +5,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"log"
+
+	// "log"
 	"net/http"
 	"os"
 
 	"github.com/iamhabbeboy/devcommit/internal/database"
-	"github.com/iamhabbeboy/devcommit/internal/git"
-	// "github.com/iamhabbeboy/devcommit/util"
 )
 
 //go:embed templates/*.html
 var tmplFS embed.FS
+
+var ch = make(chan Response)
 
 type PageData struct {
 	Title   string
@@ -43,34 +46,42 @@ func IndexHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func ProjectHandler(w http.ResponseWriter, r *http.Request) {
-	resp := Response{
-		Message: "Hello, World!",
-		Status:  "success",
-	}
-
-	// // defer db.Close()
-	// var project interface{}
-	project, err := os.Getwd() // get the current directory
-	if err != nil {
-		fmt.Println(err)
-	}
-	gitutil := git.NewGitUtil(project)
-	logs, err := gitutil.GetCommits()
-	if err != nil {
-		fmt.Println(err)
-	}
-	var db = database.Init()
-	var prj any
-	err = db.Save("git-commits", "git-tracker1", logs)
-	// key := util.Slugify("/Users/solomon/work/Golang-Project/git-tracker")
-	err = db.Get("git-commits", "git-tracker1", prj)
-	fmt.Println(err)
-	fmt.Println(prj)
-	// // Set response headers
+	go getRecord()
+	resp := <-ch
+	fmt.Println(resp)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK) // optional, defaults to 200
 
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+func getRecord() {
+	db := database.New("projects")
+	err, result := db.GetAll()
+	resp := Response{
+		Message: "nothing to see",
+		Status:  "success",
+	}
+
+	if err != nil {
+		log.Println(err.Error())
+		resp.Message = err.Error()
+		resp.Status = "error"
+		ch <- resp
+		return
+	}
+
+	j, err := json.Marshal(result)
+	if err != nil {
+		log.Println(err)
+		resp.Status = "error"
+		resp.Message = "failed to encode response"
+		ch <- resp
+		return
+	}
+	resp.Message = string(j)
+	ch <- resp
+	return
 }

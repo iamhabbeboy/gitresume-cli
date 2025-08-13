@@ -4,9 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"path/filepath"
+
+	"os"
 
 	bolt "go.etcd.io/bbolt"
 )
+
+const DEV_COMMIT_DB_FILE = "dev_commit.db"
 
 type Db struct {
 	Db   *bolt.DB
@@ -14,12 +19,13 @@ type Db struct {
 }
 
 type KV struct {
-	Key   string
-	Value string
+	Key   string `json:"key"`
+	Value string `json:"value"`
 }
 
-func New(path string, name string) *Db {
-	db, err := bolt.Open(path, 0600, nil)
+func New(name string) *Db {
+	store := filepath.Join(os.Getenv("HOME"), ".devcommit", DEV_COMMIT_DB_FILE)
+	db, err := bolt.Open(store, 0600, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -54,7 +60,7 @@ func (d *Db) Store(key string, data any) error {
 	return nil
 }
 
-func (d *Db) GetAll() (error, any) {
+func (d *Db) GetAll() (error, []KV) {
 	var result []KV
 	err := d.Db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(d.Name))
@@ -72,3 +78,5 @@ func (d *Db) GetAll() (error, any) {
 	}
 	return nil, result
 }
+
+// var BoltDB = New("projects")
