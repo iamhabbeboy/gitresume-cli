@@ -2,9 +2,11 @@ package server
 
 import (
 	"fmt"
+	"os"
+	// "log"
 	"net"
 	"net/http"
-	"os"
+	// "os"
 )
 
 /*
@@ -19,19 +21,36 @@ var err error
 
 func Serve() {
 
+	mux := http.NewServeMux()
+	cors := corsMiddleware(mux)
+
 	handlePort()
 	if listener == nil {
 		fmt.Println("No available ports found between 4000 and 4100")
 		os.Exit(1)
 	}
 
-	http.HandleFunc("/", IndexHandler)
+	mux.HandleFunc("/", IndexHandler)
 
-	http.HandleFunc("/api/projects", ProjectHandler)
+	mux.HandleFunc("/api/projects", ProjectHandler)
 
-	if err := http.Serve(listener, nil); err != nil {
+	// log.Fatal(http.ListenAndServe(":4000", cors))
+	if err := http.Serve(listener, cors); err != nil {
 		fmt.Println("Server error:", err)
 	}
+}
+
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func handlePort() {

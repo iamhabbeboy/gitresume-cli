@@ -12,21 +12,31 @@ import (
 	"os"
 
 	"github.com/iamhabbeboy/devcommit/internal/database"
+	"github.com/iamhabbeboy/devcommit/internal/git"
+	"github.com/iamhabbeboy/devcommit/util"
+	// "github.com/iamhabbeboy/devcommit/util"
 )
 
 //go:embed templates/*.html
 var tmplFS embed.FS
 
 var ch = make(chan Response)
+var db = database.New(util.PROJECT_BUCKET)
 
 type PageData struct {
 	Title   string
 	Message string
 }
 
+type ProjectResponse struct {
+	ProjectName string          `json:"project_name"`
+	Commits     []git.GitCommit `json:"commits"`
+}
+
 type Response struct {
-	Message string `json:"message"`
-	Status  string `json:"status"`
+	Message string            `json:"message"`
+	Status  string            `json:"status"`
+	Data    []ProjectResponse `json:"data"`
 }
 
 func IndexHandler(w http.ResponseWriter, r *http.Request) {
@@ -46,9 +56,8 @@ func IndexHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func ProjectHandler(w http.ResponseWriter, r *http.Request) {
-	go getRecord()
+	go getAllCommits()
 	resp := <-ch
-	fmt.Println(resp)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK) // optional, defaults to 200
 
@@ -57,12 +66,22 @@ func ProjectHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getRecord() {
-	db := database.New("projects")
+func getAllCommits() {
 	err, result := db.GetAll()
 	resp := Response{
 		Message: "nothing to see",
 		Status:  "success",
+	}
+	var data []ProjectResponse
+	var commits []git.GitCommit
+	if len(result) > 0 {
+		for _, v := range result {
+			_ = json.Unmarshal([]byte(v.Value), &commits)
+			data = append(data, ProjectResponse{
+				ProjectName: v.Key,
+				Commits:     commits,
+			})
+		}
 	}
 
 	if err != nil {
@@ -73,15 +92,8 @@ func getRecord() {
 		return
 	}
 
-	j, err := json.Marshal(result)
-	if err != nil {
-		log.Println(err)
-		resp.Status = "error"
-		resp.Message = "failed to encode response"
-		ch <- resp
-		return
-	}
-	resp.Message = string(j)
+	resp.Message = "success"
+	resp.Data = data
 	ch <- resp
 	return
 }

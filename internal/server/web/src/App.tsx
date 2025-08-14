@@ -1,7 +1,22 @@
+import { useEffect, useMemo } from "react";
 import "./App.css";
 import Header from "./components/Header";
+import { useStore } from "./store";
+import type { Project } from "./types/project";
 
 function App() {
+  const store = useStore();
+  useEffect(() => {
+    store.fetchProjects();
+  }, []);
+  const projects = useMemo(
+    () => store.projects.map((name: Project) => name.project_name),
+    [store.projects],
+  );
+  const commits = useMemo(
+    () => (store.projects ? store.projects[0].commits : []),
+    [store.projects],
+  );
   return (
     <section>
       <Header />
@@ -11,17 +26,14 @@ function App() {
             Project Listing
           </h3>
           <ul>
-            <li className="py-3 border-b border-gray-300 cursor-pointer">
-              Matchingday{" "}
-            </li>
-            <li className="py-3 border-b border-gray-300 cursor-pointer">
-              {" "}
-              Computer based test
-            </li>
-            <li className="cursor-pointer py-3 border-b border-gray-300">
-              {" "}
-              Git tracker
-            </li>
+            {projects.map((project, key) => (
+              <li
+                className="py-3 border-b border-gray-300 cursor-pointer"
+                key={key}
+              >
+                {project}
+              </li>
+            ))}
           </ul>
         </div>
         <div className="p-3 w-full">
@@ -39,17 +51,14 @@ function App() {
             </div>
           </div>
           <ul>
-            <li className="py-3 text-gray-700 border-b border-gray-300 cursor-pointer">
-              Matchingday{" "}
-            </li>
-            <li className="py-3 text-gray-700 border-b border-gray-300 cursor-pointer">
-              {" "}
-              Computer based test
-            </li>
-            <li className="cursor-pointer py-3 text-gray-700 border-b border-gray-300">
-              {" "}
-              Git tracker
-            </li>
+            {commits.map((commit, key) => (
+              <li
+                key={key}
+                className="py-3 text-gray-700 border-b border-gray-300 cursor-pointer"
+              >
+                {commit.msg}
+              </li>
+            ))}
           </ul>
         </div>
       </div>
