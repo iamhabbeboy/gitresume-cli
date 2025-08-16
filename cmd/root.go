@@ -29,6 +29,7 @@ func init() {
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(seedCmd)
 	rootCmd.AddCommand(dashboardCmd)
+	rootCmd.AddCommand(aiTestCmd)
 }
 
 var initCmd = &cobra.Command{
@@ -64,6 +65,19 @@ var dashboardCmd = &cobra.Command{
 	Short: "Web app dashboard for your dev report",
 	Run: func(cmd *cobra.Command, args []string) {
 		err := commands.DashboardHook()
+		if err != nil {
+			fmt.Println("Failed to start dashboard server:", err)
+		} else {
+			fmt.Println("Starting server ....")
+		}
+	},
+}
+
+var aiTestCmd = &cobra.Command{
+	Use:   "ai",
+	Short: "Test AI integration",
+	Run: func(cmd *cobra.Command, args []string) {
+		err := commands.AiTestHook()
 		if err != nil {
 			fmt.Println("Failed to start dashboard server:", err)
 		} else {

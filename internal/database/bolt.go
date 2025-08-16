@@ -5,13 +5,20 @@ import (
 	"fmt"
 	"log"
 	"path/filepath"
+	"sync"
 
 	"os"
 
+	"github.com/iamhabbeboy/devcommit/util"
 	bolt "go.etcd.io/bbolt"
 )
 
 const DEV_COMMIT_DB_FILE = "dev_commit.db"
+
+var (
+	instance *Db
+	once     sync.Once
+)
 
 type Db struct {
 	Db   *bolt.DB
@@ -79,4 +86,9 @@ func (d *Db) GetAll() (error, []KV) {
 	return nil, result
 }
 
-// var BoltDB = New("projects")
+func GetInstance() *Db {
+	once.Do(func() {
+		instance = New(util.PROJECT_BUCKET)
+	})
+	return instance
+}

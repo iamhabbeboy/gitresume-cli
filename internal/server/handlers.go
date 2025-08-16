@@ -11,17 +11,16 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/iamhabbeboy/devcommit/internal/ai"
 	"github.com/iamhabbeboy/devcommit/internal/database"
 	"github.com/iamhabbeboy/devcommit/internal/git"
-	"github.com/iamhabbeboy/devcommit/util"
-	// "github.com/iamhabbeboy/devcommit/util"
 )
 
 //go:embed templates/*.html
 var tmplFS embed.FS
 
 var ch = make(chan Response)
-var db = database.New(util.PROJECT_BUCKET)
+var db = database.GetInstance()
 
 type PageData struct {
 	Title   string
@@ -37,6 +36,10 @@ type Response struct {
 	Message string            `json:"message"`
 	Status  string            `json:"status"`
 	Data    []ProjectResponse `json:"data"`
+}
+
+type AiRequest struct {
+	Commits []string `json:"commits"`
 }
 
 func IndexHandler(w http.ResponseWriter, r *http.Request) {
@@ -96,4 +99,35 @@ func getAllCommits() {
 	resp.Data = data
 	ch <- resp
 	return
+}
+
+func AiHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req AiRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	prompt := fmt.Sprintf(`
+		Convert these Git commit messages into technical resume bullet points.
+		Focus on engineering impact and technologies used.
+		Return ONLY a JSON array of strings. Example: ["Improved X by Y"]
+
+		Commits: %v
+	`, req.Commits)
+
+	ai := ai.NewLlama()
+	resp, err := ai.GetStream(prompt)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(resp)
 }

@@ -34,6 +34,8 @@ func Serve() {
 
 	mux.HandleFunc("/api/projects", ProjectHandler)
 
+	mux.HandleFunc("/api/ai", AiHandler)
+
 	// log.Fatal(http.ListenAndServe(":4000", cors))
 	if err := http.Serve(listener, cors); err != nil {
 		fmt.Println("Server error:", err)

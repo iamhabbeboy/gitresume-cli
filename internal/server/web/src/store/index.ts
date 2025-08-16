@@ -10,6 +10,7 @@ type ProjectStore = {
 
 type Action = {
   fetchProjects: () => void;
+  fetchCommitsByProjectName: (projectName: string) => void;
 };
 
 export const useStore = create<ProjectStore & Action>()((set) => ({
@@ -26,5 +27,22 @@ export const useStore = create<ProjectStore & Action>()((set) => ({
     } catch (_) {
       set({ error: "Failed to fetch users", loading: false });
     }
+  },
+  fetchCommitsByProjectName: (projectName: string) => {
+    //set({ loading: true, error: null });
+    //set((state) => ({
+    //projects: state.projects.map((project) => {
+    //  if (project.project_name === projectName) {
+    //    return { ...project, commits: [] };
+    //  }
+    //  return project;
+    //}),
+    //loading: false,
+    //})),
+    // set((state: ProjectStore) => {
+    //    return {
+    //      items: state.projects.filter((item: Project) => item.project_name === projectName),
+    //    };
+    //}),
   },
 }));
