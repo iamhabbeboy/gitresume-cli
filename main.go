@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/iamhabbeboy/devcommit/cmd"
-	// "github.com/iamhabbeboy/devcommit/config"
 )
 
 func main() {

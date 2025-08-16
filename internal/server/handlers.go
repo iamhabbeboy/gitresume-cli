@@ -5,25 +5,41 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"log"
+
+	// "log"
 	"net/http"
 	"os"
 
+	"github.com/iamhabbeboy/devcommit/internal/ai"
 	"github.com/iamhabbeboy/devcommit/internal/database"
 	"github.com/iamhabbeboy/devcommit/internal/git"
-	// "github.com/iamhabbeboy/devcommit/util"
 )
 
 //go:embed templates/*.html
 var tmplFS embed.FS
+
+var ch = make(chan Response)
+var db = database.GetInstance()
 
 type PageData struct {
 	Title   string
 	Message string
 }
 
+type ProjectResponse struct {
+	ProjectName string          `json:"project_name"`
+	Commits     []git.GitCommit `json:"commits"`
+}
+
 type Response struct {
-	Message string `json:"message"`
-	Status  string `json:"status"`
+	Message string            `json:"message"`
+	Status  string            `json:"status"`
+	Data    []ProjectResponse `json:"data"`
+}
+
+type AiRequest struct {
+	Commits []string `json:"commits"`
 }
 
 func IndexHandler(w http.ResponseWriter, r *http.Request) {
@@ -43,34 +59,75 @@ func IndexHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func ProjectHandler(w http.ResponseWriter, r *http.Request) {
-	resp := Response{
-		Message: "Hello, World!",
-		Status:  "success",
-	}
-
-	// // defer db.Close()
-	// var project interface{}
-	project, err := os.Getwd() // get the current directory
-	if err != nil {
-		fmt.Println(err)
-	}
-	gitutil := git.NewGitUtil(project)
-	logs, err := gitutil.GetCommits()
-	if err != nil {
-		fmt.Println(err)
-	}
-	var db = database.Init()
-	var prj any
-	err = db.Save("git-commits", "git-tracker1", logs)
-	// key := util.Slugify("/Users/solomon/work/Golang-Project/git-tracker")
-	err = db.Get("git-commits", "git-tracker1", prj)
-	fmt.Println(err)
-	fmt.Println(prj)
-	// // Set response headers
+	go getAllCommits()
+	resp := <-ch
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK) // optional, defaults to 200
 
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+func getAllCommits() {
+	err, result := db.GetAll()
+	resp := Response{
+		Message: "nothing to see",
+		Status:  "success",
+	}
+	var data []ProjectResponse
+	var commits []git.GitCommit
+	if len(result) > 0 {
+		for _, v := range result {
+			_ = json.Unmarshal([]byte(v.Value), &commits)
+			data = append(data, ProjectResponse{
+				ProjectName: v.Key,
+				Commits:     commits,
+			})
+		}
+	}
+
+	if err != nil {
+		log.Println(err.Error())
+		resp.Message = err.Error()
+		resp.Status = "error"
+		ch <- resp
+		return
+	}
+
+	resp.Message = "success"
+	resp.Data = data
+	ch <- resp
+	return
+}
+
+func AiHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req AiRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	prompt := fmt.Sprintf(`
+		Convert these Git commit messages into technical resume bullet points.
+		Focus on engineering impact and technologies used.
+		Return ONLY a JSON array of strings. Example: ["Improved X by Y"]
+
+		Commits: %v
+	`, req.Commits)
+
+	ai := ai.NewLlama()
+	resp, err := ai.GetStream(prompt)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(resp)
 }

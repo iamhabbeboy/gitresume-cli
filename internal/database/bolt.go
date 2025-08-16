@@ -4,8 +4,20 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"path/filepath"
+	"sync"
 
+	"os"
+
+	"github.com/iamhabbeboy/devcommit/util"
 	bolt "go.etcd.io/bbolt"
+)
+
+const DEV_COMMIT_DB_FILE = "dev_commit.db"
+
+var (
+	instance *Db
+	once     sync.Once
 )
 
 type Db struct {
@@ -14,12 +26,13 @@ type Db struct {
 }
 
 type KV struct {
-	Key   string
-	Value string
+	Key   string `json:"key"`
+	Value string `json:"value"`
 }
 
-func New(path string, name string) *Db {
-	db, err := bolt.Open(path, 0600, nil)
+func New(name string) *Db {
+	store := filepath.Join(os.Getenv("HOME"), ".devcommit", DEV_COMMIT_DB_FILE)
+	db, err := bolt.Open(store, 0600, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -54,7 +67,7 @@ func (d *Db) Store(key string, data any) error {
 	return nil
 }
 
-func (d *Db) GetAll() (error, any) {
+func (d *Db) GetAll() (error, []KV) {
 	var result []KV
 	err := d.Db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(d.Name))
@@ -71,4 +84,11 @@ func (d *Db) GetAll() (error, any) {
 		return err, nil
 	}
 	return nil, result
+}
+
+func GetInstance() *Db {
+	once.Do(func() {
+		instance = New(util.PROJECT_BUCKET)
+	})
+	return instance
 }

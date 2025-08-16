@@ -1,11 +1,15 @@
 package commands
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+
+	// "path/filepath"
 	"strings"
 
 	"github.com/iamhabbeboy/devcommit/config"
+	"github.com/iamhabbeboy/devcommit/internal/ai"
 	"github.com/iamhabbeboy/devcommit/internal/database"
 	"github.com/iamhabbeboy/devcommit/internal/git"
 	"github.com/iamhabbeboy/devcommit/internal/server"
@@ -17,11 +21,7 @@ type Hook struct {
 	database database.Db
 }
 
-var (
-	bucketName = "git-commits"
-)
-
-var db = database.Init()
+// var db = database.New("projects")
 
 func SetupHook() error {
 	project, err := os.Getwd() // get the current directory
@@ -57,9 +57,7 @@ func SeedHook() error {
 	// 	return err
 	// }
 	project, err := os.Getwd() // get the current directory
-	if err != nil {
-		return err
-	}
+	db := database.GetInstance()
 	gitutil := git.NewGitUtil(project)
 	logs, err := gitutil.GetCommits()
 	if err != nil {
@@ -68,14 +66,21 @@ func SeedHook() error {
 
 	defer db.Close()
 	key := util.Slugify(filepath.Base(project))
-	err = db.Save(bucketName, key, logs)
-	// var gc []git.GitCommit
-	// res := db.Get(bucketName, "commits", &gc)
-	// log.Print(res)
-	return err
+	err = db.Store(key, logs)
+	return nil
 }
 
 func DashboardHook() error {
 	server.Serve()
+	return nil
+}
+
+func AiTestHook() error {
+	ai := ai.NewLlama()
+	resp, err := ai.GetStream("What's the meaning of life?")
+	if err != nil {
+		return err
+	}
+	fmt.Println(resp)
 	return nil
 }
