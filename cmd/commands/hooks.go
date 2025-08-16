@@ -1,17 +1,27 @@
 package commands
 
 import (
-	// "fmt"
 	"fmt"
 	"os"
+	"path/filepath"
+
+	// "path/filepath"
 	"strings"
 
 	"github.com/iamhabbeboy/devcommit/config"
+	"github.com/iamhabbeboy/devcommit/internal/ai"
+	"github.com/iamhabbeboy/devcommit/internal/database"
 	"github.com/iamhabbeboy/devcommit/internal/git"
+	"github.com/iamhabbeboy/devcommit/internal/server"
+	"github.com/iamhabbeboy/devcommit/util"
 )
 
 type Hook struct {
+	config   *config.AppConfig
+	database database.Db
 }
+
+// var db = database.New("projects")
 
 func SetupHook() error {
 	project, err := os.Getwd() // get the current directory
@@ -42,11 +52,35 @@ func SetupHook() error {
 }
 
 func SeedHook() error {
-	gitutil := git.NewGitUtil("/Users/solomon/work/Golang-Project/git-tracker")
+	// cfg, err := config.LoadConfig()
+	// if err != nil {
+	// 	return err
+	// }
+	project, err := os.Getwd() // get the current directory
+	db := database.GetInstance()
+	gitutil := git.NewGitUtil(project)
 	logs, err := gitutil.GetCommits()
 	if err != nil {
 		return err
 	}
-	fmt.Println(logs)
+
+	defer db.Close()
+	key := util.Slugify(filepath.Base(project))
+	err = db.Store(key, logs)
+	return nil
+}
+
+func DashboardHook() error {
+	server.Serve()
+	return nil
+}
+
+func AiTestHook() error {
+	ai := ai.NewLlama()
+	resp, err := ai.GetStream("What's the meaning of life?")
+	if err != nil {
+		return err
+	}
+	fmt.Println(resp)
 	return nil
 }
