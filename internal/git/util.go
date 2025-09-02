@@ -6,6 +6,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
+	"strings"
 )
 
 type GitUtil struct {
@@ -15,6 +17,11 @@ type GitUtil struct {
 type GitUser struct {
 	Name  string
 	Email string
+}
+
+type GitCommit struct {
+	Timestamp int64  `json:"timestamp"`
+	Msg       string `json:"msg"`
 }
 
 func NewGitUtil(path string) *GitUtil {
@@ -43,6 +50,30 @@ func (g *GitUtil) GetUserInfo() (*GitUser, error) {
 		return nil, err
 	}
 	return &GitUser{Name: name, Email: email}, nil
+}
+
+func (g *GitUtil) GetCommits() ([]GitCommit, error) {
+	logs, err := runGitCommand(g.Path, "log", "--pretty=format:%at=%s --author=iamhabbeboy")
+	if err != nil {
+		return nil, err
+	}
+	var commits []GitCommit
+	splt := strings.Split(logs, "\n")
+	for _, value := range splt {
+		log := strings.Split(value, "=")
+		timestampStr := log[0]
+		msg := log[1]
+
+		timestampInt, err := strconv.ParseInt(timestampStr, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		commits = append(commits, GitCommit{
+			Timestamp: timestampInt,
+			Msg:       msg,
+		})
+	}
+	return commits, nil
 }
 
 func runGitCommand(dir string, args ...string) (string, error) {
