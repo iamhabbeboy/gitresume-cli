@@ -1,0 +1,5 @@
+bin/*
+.DS_Store
+internal/.DS_Store
+contribution.log
+**/**/.env

@@ -4,6 +4,7 @@ export type CommitMessage = {
 };
 
 export type Project = {
-  project_name: string;
+  id: string;
+  name: string;
   commits: CommitMessage[];
 };
