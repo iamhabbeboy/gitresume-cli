@@ -7,7 +7,9 @@ import axios from "axios";
 
 function App() {
   const store = useStore();
+  const [isLoading, setIsLoading] = useState(false);
   const [selectedProject, setSelectedProject] = useState<string>("");
+  const [aiResponse, setAiResponse] = useState<string>("");
   useEffect(() => {
     store.fetchProjects();
     // eslint-disable-next-line
@@ -27,11 +29,18 @@ function App() {
   }, [store.projects, selectedProject]);
 
   const handleImproveWithAi = async () => {
-    const logs = commits?.map((c) => c.msg);
-    const result = await axios.post("http://localhost:4000/api/ai", {
-      commits: logs,
-    });
-    console.log(result);
+    try {
+      setIsLoading(true);
+      const logs = commits?.map((c) => c.msg);
+      const { data } = await axios.post("http://localhost:4000/api/ai", {
+        commits: logs,
+      });
+      setAiResponse(data["response"]);
+    } catch (e) {
+      console.log(e);
+    } finally {
+      setIsLoading(false);
+    }
   };
   return (
     <section>
@@ -60,6 +69,14 @@ function App() {
               <p className="text-sm text-gray-500">
                 Below is the list of your contributions for this project{" "}
               </p>
+              {isLoading && (
+                <>
+                  <img src="/loading.svg" alt="loading" width="150" />
+                  <p className="text-sm text-gray-500">
+                    AI is working on your code
+                  </p>
+                </>
+              )}
             </div>
             <div>
               <button
