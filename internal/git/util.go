@@ -24,6 +24,12 @@ type GitCommit struct {
 	Msg       string `json:"msg"`
 }
 
+type Project struct {
+	ID      string      `json:"id"`
+	Name    string      `json:"name"`
+	Commits []GitCommit `json:"commits"`
+}
+
 func NewGitUtil(path string) *GitUtil {
 	return &GitUtil{
 		Path: path}
@@ -52,11 +58,12 @@ func (g *GitUtil) GetUserInfo() (*GitUser, error) {
 	return &GitUser{Name: name, Email: email}, nil
 }
 
-func (g *GitUtil) GetCommits() ([]GitCommit, error) {
-	logs, err := runGitCommand(g.Path, "log", "--pretty=format:%at=%s --author=iamhabbeboy")
+func (g *GitUtil) GetCommits(email string) ([]GitCommit, error) {
+	logs, err := runGitCommand(g.Path, "log", "--pretty=format:%at=%s", "--author", email)
 	if err != nil {
 		return nil, err
 	}
+
 	var commits []GitCommit
 	splt := strings.Split(logs, "\n")
 	for _, value := range splt {
@@ -68,9 +75,16 @@ func (g *GitUtil) GetCommits() ([]GitCommit, error) {
 		if err != nil {
 			return nil, err
 		}
+
+		if strings.Contains(msg, "Merge") {
+			continue
+		}
+
+		stripMsg := strings.Replace(msg, "--author", "", 1)
+		stripMsg = strings.TrimSpace(stripMsg)
 		commits = append(commits, GitCommit{
 			Timestamp: timestampInt,
-			Msg:       msg,
+			Msg:       stripMsg,
 		})
 	}
 	return commits, nil
