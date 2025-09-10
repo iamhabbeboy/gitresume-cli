@@ -30,6 +30,15 @@ func init() {
 	rootCmd.AddCommand(seedCmd)
 	rootCmd.AddCommand(dashboardCmd)
 	rootCmd.AddCommand(aiTestCmd)
+	rootCmd.AddCommand(completionCmd)
+}
+
+var completionCmd = &cobra.Command{
+	Use:   "completion",
+	Short: "Generate bash completion scripts",
+	Run: func(cmd *cobra.Command, args []string) {
+	},
+	Hidden: true,
 }
 
 var initCmd = &cobra.Command{
@@ -38,7 +47,7 @@ var initCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		err := commands.SetupHook()
 		if err != nil {
-			fmt.Println("Failed to add project:", err)
+			fmt.Println("🚫 Failed to add project:", err)
 		} else {
 			fmt.Println("🎉 Project successfully added")
 		}
@@ -51,9 +60,9 @@ var seedCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		err := commands.SeedHook()
 		if err != nil {
-			fmt.Println("Failed to add project:", err)
+			fmt.Println("🚫 Failed to add project:", err)
 		} else {
-			fmt.Println("Successfully seeded")
+			fmt.Println("🎉 Successfully seeded")
 		}
 		// report := storage.GenerateWeeklyReport()
 		// fmt.Println("\n--- Weekly Report ---\n", report)
@@ -68,7 +77,7 @@ var dashboardCmd = &cobra.Command{
 		if err != nil {
 			fmt.Println("Failed to start dashboard server:", err)
 		} else {
-			fmt.Println("Starting server ....")
+			fmt.Println("🚀 Starting server ....")
 		}
 	},
 }

@@ -91,15 +91,25 @@ func LoadConfig() (AppConfig, error) {
 }
 
 // SaveConfig writes the AppConfig to disk
-func SaveConfig(key string, cfg *AppConfig) error {
+func SaveConfig(cfg *AppConfig) error {
 	home, _ := os.UserHomeDir()
 	configPath := filepath.Join(home, ".devcommit", "config.yaml")
 
 	v := viper.New()
 	v.SetConfigType("yaml")
 	v.Set("projects", cfg.Projects)
+	v.Set("user.name", cfg.User.Name)
+	v.Set("user.email", cfg.User.Email)
 
 	return v.WriteConfigAs(configPath)
+}
+
+func GetProject(path string) (User, error) {
+	cfg, err := LoadConfig()
+	if err != nil {
+		return User{}, err
+	}
+	return cfg.User, nil
 }
 
 func AddProject(path string, user User) error {
@@ -108,9 +118,12 @@ func AddProject(path string, user User) error {
 		return err
 	}
 
-	// if !hasGitFolder(path) {
-	// 	return fmt.Errorf("path is not a git repository: %s", path)
-	// }
+	if !hasGitFolder(path) {
+		return fmt.Errorf("path is not a git repository: %s", path)
+	}
+
+	cfg.User.Name = user.Name
+	cfg.User.Email = user.Email
 
 	for _, p := range cfg.Projects {
 		if p.Path == path {
@@ -126,7 +139,7 @@ func AddProject(path string, user User) error {
 		CreatedAt: time.Now(),
 	}
 	cfg.Projects = append(cfg.Projects, project)
-	return SaveConfig("projects", &cfg)
+	return SaveConfig(&cfg)
 }
 
 func hasGitFolder(dir string) bool {

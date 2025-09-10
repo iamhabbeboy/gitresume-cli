@@ -3,17 +3,19 @@ package database
 import (
 	"encoding/json"
 	"fmt"
-	"log"
+
+	// "log"
 	"path/filepath"
 	"sync"
 
 	"os"
 
+	"github.com/iamhabbeboy/devcommit/internal/git"
 	"github.com/iamhabbeboy/devcommit/util"
 	bolt "go.etcd.io/bbolt"
 )
 
-const DEV_COMMIT_DB_FILE = "dev_commit.db"
+const DEV_COMMIT_DB_FILE = "devcommit.db"
 
 var (
 	instance *Db
@@ -32,10 +34,7 @@ type KV struct {
 
 func New(name string) *Db {
 	store := filepath.Join(os.Getenv("HOME"), ".devcommit", DEV_COMMIT_DB_FILE)
-	db, err := bolt.Open(store, 0600, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
+	db, _ := bolt.Open(store, 0600, nil)
 	return &Db{Db: db, Name: name}
 }
 
@@ -43,28 +42,79 @@ func (d *Db) Close() error {
 	return d.Db.Close()
 }
 
-/*
-* Storage approaches
-* 1. Key: project name, value: json(array of commits)
-* 2. Key: uuid, value: json(array of commits with the project name)
- * 3. Key: uuid, value: single commit
-*/
-func (d *Db) Store(key string, data any) error {
-	buf, err := json.Marshal(data)
-	if err != nil {
-		return err
-	}
-	err = d.Db.Update(func(tx *bolt.Tx) error {
+func (d *Db) Store(key string, data git.Project) error {
+	err := d.Db.Update(func(tx *bolt.Tx) error {
 		bucket, err := tx.CreateBucketIfNotExists([]byte(d.Name))
 		if err != nil {
 			return err
 		}
-		return bucket.Put([]byte(key), buf)
+		sub, _ := bucket.CreateBucketIfNotExists([]byte(key))
+		sub.Put([]byte("name"), []byte(data.Name))
+
+		for k, v := range data.Commits {
+			data, _ := json.Marshal(v)
+			index := []byte(fmt.Appendf(nil, "commit:%d", k+1))
+			sub.Put(index, []byte(data))
+		}
+		return nil
 	})
+
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func (d *Db) GetAllProject() ([]git.Project, error) {
+	var results []git.Project
+
+	err := d.Db.View(func(tx *bolt.Tx) error {
+		root := tx.Bucket([]byte(d.Name))
+		if root == nil {
+			return nil // no projects yet
+		}
+
+		return root.ForEach(func(k, v []byte) error {
+			// k = sub-bucket name (project ID), v = nil since it's a bucket
+			if v != nil {
+				return nil
+			}
+
+			sub := root.Bucket(k)
+			if sub == nil {
+				return nil
+			}
+
+			// get project name
+			name := string(sub.Get([]byte("name")))
+
+			// get commits
+			var commits []git.GitCommit
+			c := sub.Cursor()
+			for ck, cv := c.First(); ck != nil; ck, cv = c.Next() {
+				if string(ck) == "name" {
+					continue
+				}
+				if len(ck) >= 7 && string(ck[:7]) == "commit:" {
+					var commit git.GitCommit
+					if err := json.Unmarshal(cv, &commit); err != nil {
+						return err
+					}
+					commits = append(commits, commit)
+				}
+			}
+
+			results = append(results, git.Project{
+				ID:      string(k), // 👈 the sub-bucket key (project ID)
+				Name:    name,
+				Commits: commits,
+			})
+
+			return nil
+		})
+	})
+
+	return results, err
 }
 
 func (d *Db) GetAll() (error, []KV) {
@@ -72,7 +122,7 @@ func (d *Db) GetAll() (error, []KV) {
 	err := d.Db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(d.Name))
 		if b == nil {
-			return fmt.Errorf("bucket %s does not exist", d.Name)
+			return fmt.Errorf("no project is available")
 		}
 		c := b.Cursor()
 		for k, v := c.First(); k != nil; k, v = c.Next() {

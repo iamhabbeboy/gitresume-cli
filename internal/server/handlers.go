@@ -28,13 +28,13 @@ type PageData struct {
 }
 
 type ProjectResponse struct {
-	ProjectName string          `json:"project_name"`
-	Commits     []git.GitCommit `json:"commits"`
+	ID string `json:"id"`
+	git.Project
 }
 
 type Response struct {
 	Message string            `json:"message"`
-	Status  string            `json:"status"`
+	Status  int               `json:"status"`
 	Data    []ProjectResponse `json:"data"`
 }
 
@@ -63,26 +63,24 @@ func ProjectHandler(w http.ResponseWriter, r *http.Request) {
 	resp := <-ch
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK) // optional, defaults to 200
-
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
 func getAllCommits() {
-	err, result := db.GetAll()
+	result, err := db.GetAllProject()
 	resp := Response{
 		Message: "nothing to see",
-		Status:  "success",
+		Status:  http.StatusOK,
 	}
 	var data []ProjectResponse
-	var commits []git.GitCommit
+
 	if len(result) > 0 {
 		for _, v := range result {
-			_ = json.Unmarshal([]byte(v.Value), &commits)
 			data = append(data, ProjectResponse{
-				ProjectName: v.Key,
-				Commits:     commits,
+				ID:      v.ID,
+				Project: git.Project{Name: v.Name, Commits: v.Commits},
 			})
 		}
 	}
@@ -90,7 +88,7 @@ func getAllCommits() {
 	if err != nil {
 		log.Println(err.Error())
 		resp.Message = err.Error()
-		resp.Status = "error"
+		resp.Status = http.StatusInternalServerError
 		ch <- resp
 		return
 	}
@@ -112,13 +110,31 @@ func AiHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	prompt := fmt.Sprintf(`
-		Convert these Git commit messages into technical resume bullet points.
+	/*	Convert these Git commit messages into technical resume bullet points.
 		Focus on engineering impact and technologies used.
 		Return ONLY a JSON array of strings. Example: ["Improved X by Y"]
+	*/
 
-		Commits: %v
+	prompt := fmt.Sprintf(`You are an expert technical recruiter helping a software engineer write their resume.
+I will provide you with a JSON array of git commit messages. Your task is to transform them into polished, professional resume bullet points that highlight achievements and impact.
+Guidelines:
+- Use strong action verbs (e.g., Developed, Implemented, Optimized).
+- Merge related commits into one bullet if possible.
+- Reframe 'fix bug' → 'Resolved issue' with outcome/impact.
+- Each bullet should be 1–2 sentences.
+- Return results in JSON, preserving the original commit.
+
+Example:
+Input: ['fix bug in payment gateway API']
+Output:
+[
+  {
+    \"commit\": \"fix bug in payment gateway API\",
+    \"resume_bullet\": \"Resolved a critical issue in the payment gateway API, ensuring reliable transactions and reducing failed payments by 20%.\"
+  }
+]
+
+Now transform this array: %v
 	`, req.Commits)
 
 	ai := ai.NewLlama()
