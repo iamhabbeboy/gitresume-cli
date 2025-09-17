@@ -1,5 +1,5 @@
 # Project variables
-BINARY_NAME := devcommit
+BINARY_NAME := gitresume
 MAIN_FILE := ./main.go
 
 .PHONY: all build run clean test lint

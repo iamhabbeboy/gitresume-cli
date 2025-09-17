@@ -11,9 +11,9 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/iamhabbeboy/devcommit/internal/ai"
-	"github.com/iamhabbeboy/devcommit/internal/database"
-	"github.com/iamhabbeboy/devcommit/internal/git"
+	"github.com/iamhabbeboy/gitresume/internal/ai"
+	"github.com/iamhabbeboy/gitresume/internal/database"
+	"github.com/iamhabbeboy/gitresume/internal/git"
 )
 
 //go:embed templates/*.html
@@ -138,7 +138,7 @@ Now transform this array: %v
 	`, req.Commits)
 
 	ai := ai.NewLlama()
-	resp, err := ai.GetStream(prompt)
+	resp, err := ai.GetResponse(prompt)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusMethodNotAllowed)
 		return
