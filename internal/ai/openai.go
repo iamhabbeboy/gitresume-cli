@@ -10,6 +10,6 @@ func (o *OpenAIConfig) Generate(message string) (string, error) {
 	return "", nil
 }
 
-func (o *OpenAIConfig) Chat(messages []string) (string, error) {
-	return "", nil
+func (o *OpenAIConfig) Chat(messages []string) ([]string, error) {
+	return nil, nil
 }

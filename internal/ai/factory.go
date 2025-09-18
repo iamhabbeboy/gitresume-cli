@@ -2,7 +2,7 @@ package ai
 
 type AiModel interface {
 	Generate(message string) (string, error)
-	Chat(messages []string) (string, error)
+	Chat(messages []string) ([]string, error)
 }
 
 type Model string

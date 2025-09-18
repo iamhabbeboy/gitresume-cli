@@ -10,7 +10,8 @@ type ProjectStore = {
 
 type Action = {
   fetchProjects: () => void;
-  updateCommits: (projectName: string, index: number, ai: string) => void;
+  updateCommit: (projectName: string, index: number, ai: string) => void;
+  updateCommits: (projectName: string, commits: CommitMessage[]) => void;
 };
 
 export const useStore = create<ProjectStore & Action>()((set) => ({
@@ -25,11 +26,26 @@ export const useStore = create<ProjectStore & Action>()((set) => ({
       );
       set({ projects: res.data.data, loading: false });
     } catch (err) {
-      set({ error: "Failed to fetch users" + err.message, loading: false });
+      set({
+        error: "Failed to fetch users" + JSON.stringify(err),
+        loading: false,
+      });
     }
   },
 
-  updateCommits: (projectName: string, index: number, ai: string) => {
+  updateCommits: (projectName: string, commits: CommitMessage[]) => {
+    set((state) => ({
+      projects: state.projects.map((p) =>
+        p.name === projectName
+          ? {
+              ...p,
+              commits: commits,
+            }
+          : p,
+      ),
+    }));
+  },
+  updateCommit: (projectName: string, index: number, ai: string) => {
     set((state) => ({
       projects: state.projects.map((p) =>
         p.name === projectName

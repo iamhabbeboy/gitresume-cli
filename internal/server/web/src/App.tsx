@@ -4,14 +4,15 @@ import Header from "./components/Header";
 import { useStore } from "./store";
 import type { Project } from "./types/project";
 import axios from "axios";
+import ReactMarkdown from "react-markdown";
 
 function App() {
   const store = useStore();
   const [isLoading, setIsLoading] = useState(-1);
   const [selectedProject, setSelectedProject] = useState<string>("");
-  const [aiResponse, setAiResponse] = useState<string>("");
   const [editProjectName, setEditProjectName] = useState<string>("");
   const [index, setIndex] = useState(-1);
+  const [commitIsLoading, setCommitIsLoading] = useState(false);
 
   useEffect(() => {
     store.fetchProjects();
@@ -39,14 +40,35 @@ function App() {
       setIsLoading(indx);
       setIndex(indx);
       const { data } = await axios.post("http://localhost:4000/api/ai", {
-        commit: msg,
+        commits: [msg],
       });
-      setAiResponse(data);
-      store.updateCommits(selectedProject, index, data);
+      store.updateCommit(selectedProject, index, data);
     } catch (e) {
       alert(e);
     } finally {
       setIsLoading(-1);
+    }
+  };
+
+  const handleImproveAllWithAI = async () => {
+    try {
+      setCommitIsLoading(true);
+      const messages = commits.map((c) => c.msg);
+      const { data } = await axios.post("http://localhost:4000/api/ai", {
+        commits: messages,
+      });
+
+      const updatedCommits = data.map((c: string, i: number) => ({
+        index: i,
+        msg: c,
+        ai: "",
+      }));
+
+      store.updateCommits(selectedProject, updatedCommits);
+    } catch (e) {
+      console.log(e);
+    } finally {
+      setCommitIsLoading(false);
     }
   };
 
@@ -230,8 +252,14 @@ function App() {
               </p>
             </div>
             <div>
-              <button className="bg-cyan-600 text-white px-10 py-2 rounded-lg text-xs hover:bg-cyan-700">
-                Improve with AI
+              <button
+                className="flex justify-between bg-cyan-600 text-white px-10 py-2 rounded-lg text-xs hover:bg-cyan-700"
+                onClick={() => handleImproveAllWithAI()}
+              >
+                Improve with AI{" "}
+                {commitIsLoading && (
+                  <img src="/loading.svg" alt="ai" width="20" />
+                )}
               </button>
             </div>
           </div>
@@ -244,14 +272,20 @@ function App() {
                   onClick={() => setIndex(key)}
                 >
                   <div className="flex justify-between">
-                    <p>{commit.msg}</p>
-                    <button
-                      className="bg-blue-500 text-white px-5 py-1 rounded-lg text-xs hover:bg-blue-800"
-                      onClick={() => handleImproveWithAi(key, commit.msg)}
-                      disabled={isLoading === key}
-                    >
-                      use AI
-                    </button>
+                    <div className="w-10/12">
+                      <ReactMarkdown>{commit.msg}</ReactMarkdown>
+                    </div>
+                    {index === key && (
+                      <div className="w-2/12 flex items-center justify-end">
+                        <button
+                          className="bg-blue-500 text-white px-5 py-1 rounded-lg text-xs hover:bg-blue-800"
+                          onClick={() => handleImproveWithAi(key, commit.msg)}
+                          disabled={isLoading === key}
+                        >
+                          use AI
+                        </button>
+                      </div>
+                    )}
                   </div>
                   <div
                     className={`text-gray-500 ${index === key ? "block" : "hidden"}`}
@@ -261,8 +295,10 @@ function App() {
                         <img src="/loading.svg" alt="loading" width="20" />
                       </>
                     )}
-                    Index: {commit.index}{" "}
-                    <p className="text-sm">AI response: {commit.ai}</p>
+                    <div className="text-sm w-full py-2 pl-0 px-2">
+                      <span className="font-bold">AI response:</span>{" "}
+                      <p>{commit.ai}</p>
+                    </div>
                   </div>
                 </li>
               ))}

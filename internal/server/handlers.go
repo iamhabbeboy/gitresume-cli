@@ -14,6 +14,7 @@ import (
 	"github.com/iamhabbeboy/gitresume/internal/ai"
 	"github.com/iamhabbeboy/gitresume/internal/database"
 	"github.com/iamhabbeboy/gitresume/internal/git"
+	"github.com/iamhabbeboy/gitresume/util"
 )
 
 //go:embed templates/*.html
@@ -39,7 +40,7 @@ type Response struct {
 }
 
 type AiRequest struct {
-	Commit string `json:"commit"`
+	Commits []string `json:"commits"`
 }
 
 func IndexHandler(w http.ResponseWriter, r *http.Request) {
@@ -110,8 +111,9 @@ func AiHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	chat := "You are a professional resume writer specializing in software engineering roles. Transform git commit messages into polished resume bullet points that highlight business value and technical achievements. Use action verbs, past tense, focus on impact, and keep concise (1-2 lines max). Output format: Single bullet point"
-	msg := fmt.Sprintf(`Transform this commit message into a resume bullet point: %s`, req.Commit)
+
+	chat := "You are a professional resume writer specializing in software engineering roles. Transform git commit messages into polished resume bullet points that highlight business value and technical achievements. Use action verbs, past tense, focus on impact, and keep concise (1-2 lines max). Output format: Each bullet point according to the input"
+	msg := fmt.Sprintf(`Transform this commit message into a resume bullets point and make it concise and non-ai or non-robotic: %s`, util.ToUserContent(req.Commits))
 
 	ai := ai.NewChatModel(ai.Llama)
 	resp, err := ai.Chat([]string{chat, msg})

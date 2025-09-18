@@ -11,3 +11,7 @@ func Slugify(s string) string {
 	s = strings.ToLower(s)
 	return s
 }
+
+func ToUserContent(sentences []string) string {
+	return strings.Join(sentences, "\n")
+}
