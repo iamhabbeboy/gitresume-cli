@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import axios from "axios";
-import type { Project } from "../types/project";
+import type { CommitMessage, Project } from "../types/project";
 
 type ProjectStore = {
   projects: Project[];
@@ -10,7 +10,7 @@ type ProjectStore = {
 
 type Action = {
   fetchProjects: () => void;
-  fetchCommitsByProjectName: (projectName: string) => void;
+  updateCommits: (projectName: string, index: number, ai: string) => void;
 };
 
 export const useStore = create<ProjectStore & Action>()((set) => ({
@@ -24,25 +24,23 @@ export const useStore = create<ProjectStore & Action>()((set) => ({
         "http://localhost:4000/api/projects",
       );
       set({ projects: res.data.data, loading: false });
-    } catch (_) {
-      set({ error: "Failed to fetch users", loading: false });
+    } catch (err) {
+      set({ error: "Failed to fetch users" + err.message, loading: false });
     }
   },
-  fetchCommitsByProjectName: (projectName: string) => {
-    //set({ loading: true, error: null });
-    //set((state) => ({
-    //projects: state.projects.map((project) => {
-    //  if (project.project_name === projectName) {
-    //    return { ...project, commits: [] };
-    //  }
-    //  return project;
-    //}),
-    //loading: false,
-    //})),
-    // set((state: ProjectStore) => {
-    //    return {
-    //      items: state.projects.filter((item: Project) => item.project_name === projectName),
-    //    };
-    //}),
+
+  updateCommits: (projectName: string, index: number, ai: string) => {
+    set((state) => ({
+      projects: state.projects.map((p) =>
+        p.name === projectName
+          ? {
+              ...p,
+              commits: p.commits.map((c, i) =>
+                i === index ? { ...c, ai } : c,
+              ),
+            }
+          : p,
+      ),
+    }));
   },
 }));

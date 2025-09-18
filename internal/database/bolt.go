@@ -10,12 +10,12 @@ import (
 
 	"os"
 
-	"github.com/iamhabbeboy/devcommit/internal/git"
-	"github.com/iamhabbeboy/devcommit/util"
+	"github.com/iamhabbeboy/gitresume/internal/git"
+	"github.com/iamhabbeboy/gitresume/util"
 	bolt "go.etcd.io/bbolt"
 )
 
-const DEV_COMMIT_DB_FILE = "devcommit.db"
+const DEV_COMMIT_DB_FILE = "gitresume.db"
 
 var (
 	instance *Db
@@ -33,13 +33,17 @@ type KV struct {
 }
 
 func New(name string) *Db {
-	store := filepath.Join(os.Getenv("HOME"), ".devcommit", DEV_COMMIT_DB_FILE)
+	store := filepath.Join(os.Getenv("HOME"), ".gitresume", DEV_COMMIT_DB_FILE)
 	db, _ := bolt.Open(store, 0600, nil)
 	return &Db{Db: db, Name: name}
 }
 
 func (d *Db) Close() error {
 	return d.Db.Close()
+}
+
+func (d *Db) Delete(key string) error {
+	return nil
 }
 
 func (d *Db) Store(key string, data git.Project) error {

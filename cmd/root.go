@@ -5,24 +5,24 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/iamhabbeboy/devcommit/cmd/commands"
+	"github.com/iamhabbeboy/gitresume/cmd/commands"
 	"github.com/spf13/cobra"
 )
 
 /**
 * CLI Entry Point
-* devcommit init
-* devcommit status
-* devcommit summary
-* devcommit apply cover-letter --job job.json
-* devcommit interview
-* devcommit report
-* devcommit dashboard
+* gitresume init
+* gitresume status
+* gitresume summary
+* gitresume apply cover-letter --job job.json
+* gitresume interview
+* gitresume report
+* gitresume dashboard
  */
 
 var rootCmd = &cobra.Command{
-	Use:   "devcommit",
-	Short: "🚀 DevCommit helps you summarize git activity and prep for job interviews",
+	Use:   "gitresume",
+	Short: "🚀 Gitresume helps you summarize git activity and prep for job interviews",
 }
 
 func init() {
@@ -43,7 +43,7 @@ var completionCmd = &cobra.Command{
 
 var initCmd = &cobra.Command{
 	Use:   "init",
-	Short: "Add project to your devcommit",
+	Short: "Add project to your gitresume",
 	Run: func(cmd *cobra.Command, args []string) {
 		err := commands.SetupHook()
 		if err != nil {
@@ -90,7 +90,7 @@ var aiTestCmd = &cobra.Command{
 		if err != nil {
 			fmt.Println("Failed to start dashboard server:", err)
 		} else {
-			fmt.Println("Starting server ....")
+			fmt.Println("🚀 Done!")
 		}
 	},
 }

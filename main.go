@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/iamhabbeboy/devcommit/cmd"
+	"github.com/iamhabbeboy/gitresume/cmd"
 )
 
 func main() {

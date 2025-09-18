@@ -7,10 +7,11 @@ import axios from "axios";
 
 function App() {
   const store = useStore();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(-1);
   const [selectedProject, setSelectedProject] = useState<string>("");
   const [aiResponse, setAiResponse] = useState<string>("");
   const [editProjectName, setEditProjectName] = useState<string>("");
+  const [index, setIndex] = useState(-1);
 
   useEffect(() => {
     store.fetchProjects();
@@ -21,26 +22,31 @@ function App() {
       store.projects.map((prd: Project) => ({ name: prd.name, id: prd.id })),
     [store.projects],
   );
+
   const commits = useMemo(() => {
-    if (store.projects) {
-      const filter = store.projects.find((p) => p.name === selectedProject);
-      return filter?.commits;
-    }
-    return [];
+    const filter = store.projects.find((p) => p.name === selectedProject);
+    return (
+      filter?.commits.map((c, i) => ({
+        index: i,
+        msg: c.msg,
+        ai: c.ai ?? "",
+      })) ?? []
+    );
   }, [store.projects, selectedProject]);
 
-  const handleImproveWithAi = async () => {
+  const handleImproveWithAi = async (indx: number, msg: string) => {
     try {
-      setIsLoading(true);
-      const logs = commits?.map((c) => c.msg);
+      setIsLoading(indx);
+      setIndex(indx);
       const { data } = await axios.post("http://localhost:4000/api/ai", {
-        commits: logs,
+        commit: msg,
       });
-      setAiResponse(data["response"]);
+      setAiResponse(data);
+      store.updateCommits(selectedProject, index, data);
     } catch (e) {
-      console.log(e);
+      alert(e);
     } finally {
-      setIsLoading(false);
+      setIsLoading(-1);
     }
   };
 
@@ -61,7 +67,7 @@ function App() {
       <div className="mt-10 container mx-auto p-10 border border-gray-300 rounded-lg bg-white flex">
         <div className="w-3/12 border-r border-gray-300">
           <h3 className="text-lg border-b border-gray-300 font-bold">
-            Project Listing
+            Projects
             {editProjectName}
           </h3>
           <ul>
@@ -171,7 +177,7 @@ function App() {
                           {" "}
                           <title>delete_2_line</title>{" "}
                           <g
-                            id="页面-1"
+                            id="page-1"
                             stroke="none"
                             strokeWidth="1"
                             fill="none"
@@ -222,32 +228,42 @@ function App() {
               <p className="text-sm text-gray-500">
                 Below is the list of your contributions for this project{" "}
               </p>
-              {isLoading && (
-                <>
-                  <img src="/loading.svg" alt="loading" width="150" />
-                  <p className="text-sm text-gray-500">
-                    AI is working on your code
-                  </p>
-                </>
-              )}
             </div>
             <div>
-              <button
-                onClick={handleImproveWithAi}
-                className="bg-cyan-600 text-white px-10 py-2 rounded-lg text-xs hover:bg-cyan-700"
-              >
+              <button className="bg-cyan-600 text-white px-10 py-2 rounded-lg text-xs hover:bg-cyan-700">
                 Improve with AI
               </button>
             </div>
           </div>
-          <ul>
+          <ul className="h-[600px] overflow-y-scroll">
             {commits &&
               commits.map((commit, key) => (
                 <li
                   key={key}
                   className="py-3 text-gray-700 border-b border-gray-300 cursor-pointer"
+                  onClick={() => setIndex(key)}
                 >
-                  {commit.msg}
+                  <div className="flex justify-between">
+                    <p>{commit.msg}</p>
+                    <button
+                      className="bg-blue-500 text-white px-5 py-1 rounded-lg text-xs hover:bg-blue-800"
+                      onClick={() => handleImproveWithAi(key, commit.msg)}
+                      disabled={isLoading === key}
+                    >
+                      use AI
+                    </button>
+                  </div>
+                  <div
+                    className={`text-gray-500 ${index === key ? "block" : "hidden"}`}
+                  >
+                    {isLoading === index && (
+                      <>
+                        <img src="/loading.svg" alt="loading" width="20" />
+                      </>
+                    )}
+                    Index: {commit.index}{" "}
+                    <p className="text-sm">AI response: {commit.ai}</p>
+                  </div>
                 </li>
               ))}
           </ul>

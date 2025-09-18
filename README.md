@@ -1,1 +1,2 @@
-# devcommit-cli
+# gitresume-cli
+

@@ -46,7 +46,7 @@ func LoadConfig() (AppConfig, error) {
 		panic("Cannot find home directory")
 	}
 
-	configDir := filepath.Join(homeDir, ".devcommit")
+	configDir := filepath.Join(homeDir, ".gitresume")
 	configFile := filepath.Join(configDir, "config.yaml")
 	currentUser, err := user.Current()
 
@@ -93,7 +93,7 @@ func LoadConfig() (AppConfig, error) {
 // SaveConfig writes the AppConfig to disk
 func SaveConfig(cfg *AppConfig) error {
 	home, _ := os.UserHomeDir()
-	configPath := filepath.Join(home, ".devcommit", "config.yaml")
+	configPath := filepath.Join(home, ".gitresume", "config.yaml")
 
 	v := viper.New()
 	v.SetConfigType("yaml")
