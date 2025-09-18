@@ -29,13 +29,13 @@ func TestGetStream_Success(t *testing.T) {
 
 	// Call function
 	llama := NewLlama()
-	resp, err := llama.GetStream("test message")
+	resp, err := llama.Generate("test message")
 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if resp.Response != expectedResp.Response {
-		t.Errorf("expected %q, got %q", expectedResp.Response, resp.Response)
+	if resp != expectedResp.Response {
+		t.Errorf("expected %q, got %q", expectedResp.Response, resp)
 	}
 }
 
@@ -61,7 +61,7 @@ func TestGetStream_HTTPError(t *testing.T) {
 	aiHost = "http://127.0.0.1:0"
 
 	llama := NewLlama()
-	_, err := llama.GetStream("any message")
+	_, err := llama.Generate("any message")
 	if err == nil {
 		t.Errorf("expected error when server is unreachable, got nil")
 	}

@@ -39,7 +39,7 @@ type Response struct {
 }
 
 type AiRequest struct {
-	Commits []string `json:"commits"`
+	Commit string `json:"commit"`
 }
 
 func IndexHandler(w http.ResponseWriter, r *http.Request) {
@@ -110,35 +110,11 @@ func AiHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	/*	Convert these Git commit messages into technical resume bullet points.
-		Focus on engineering impact and technologies used.
-		Return ONLY a JSON array of strings. Example: ["Improved X by Y"]
-	*/
+	chat := "You are a professional resume writer specializing in software engineering roles. Transform git commit messages into polished resume bullet points that highlight business value and technical achievements. Use action verbs, past tense, focus on impact, and keep concise (1-2 lines max). Output format: Single bullet point"
+	msg := fmt.Sprintf(`Transform this commit message into a resume bullet point: %s`, req.Commit)
 
-	prompt := fmt.Sprintf(`You are an expert technical recruiter helping a software engineer write their resume.
-I will provide you with a JSON array of git commit messages. Your task is to transform them into polished, professional resume bullet points that highlight achievements and impact.
-Guidelines:
-- Use strong action verbs (e.g., Developed, Implemented, Optimized).
-- Merge related commits into one bullet if possible.
-- Reframe 'fix bug' → 'Resolved issue' with outcome/impact.
-- Each bullet should be 1–2 sentences.
-- Return results in JSON, preserving the original commit.
-
-Example:
-Input: ['fix bug in payment gateway API']
-Output:
-[
-  {
-    \"commit\": \"fix bug in payment gateway API\",
-    \"resume_bullet\": \"Resolved a critical issue in the payment gateway API, ensuring reliable transactions and reducing failed payments by 20%.\"
-  }
-]
-
-Now transform this array: %v
-	`, req.Commits)
-
-	ai := ai.NewLlama()
-	resp, err := ai.GetResponse(prompt)
+	ai := ai.NewChatModel(ai.Llama)
+	resp, err := ai.Chat([]string{chat, msg})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusMethodNotAllowed)
 		return

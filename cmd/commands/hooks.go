@@ -7,11 +7,12 @@ import (
 
 	"strings"
 
-	"github.com/iamhabbeboy/devcommit/config"
-	"github.com/iamhabbeboy/devcommit/internal/ai"
-	"github.com/iamhabbeboy/devcommit/internal/database"
-	"github.com/iamhabbeboy/devcommit/internal/git"
-	"github.com/iamhabbeboy/devcommit/internal/server"
+	"github.com/iamhabbeboy/gitresume/config"
+	"github.com/iamhabbeboy/gitresume/internal/ai"
+	"github.com/iamhabbeboy/gitresume/internal/database"
+	"github.com/iamhabbeboy/gitresume/internal/git"
+	"github.com/iamhabbeboy/gitresume/internal/server"
+
 	// "github.com/iamhabbeboy/devcommit/util"
 
 	"github.com/google/uuid"
@@ -70,9 +71,6 @@ func SeedHook() error {
 		Name:    filepath.Base(project),
 		Commits: logs,
 	}
-	// fmt.Println(key)
-	// fmt.Println(prj)
-	// key := util.Slugify(filepath.Base(project))
 	err = db.Store(key, prj)
 	return nil
 }
@@ -83,67 +81,19 @@ func DashboardHook() error {
 }
 
 func AiTestHook() error {
-	ai := ai.NewLlama()
+	ai := ai.NewChatModel(ai.Llama)
 
-	// commits := []string{
-	// 	"chore(api): integrate api with the frontend, listing the commit messages --author",
-	// 	"fix(db-integration): delete the old db file, handle error gracefully --author",
-	// 	"chore(db-integration): Implement bolt db instance --author",
-	// }
-	//
-	// 	prompt := fmt.Sprintf(`You are an expert technical recruiter helping a software engineer write their resume.I will provide you with a JSON array of git commit messages. Your task is to transform them into polished, professional resume bullet points that highlight achievements and impact.
-	// Guidelines:
-	// - Use strong action verbs (e.g., Developed, Implemented, Optimized).
-	// - Merge related commits into one bullet if possible.
-	// - Reframe 'fix bug' → 'Resolved issue' with outcome/impact.
-	// - Each bullet should be 1–2 sentences.
-	// - Return results in JSON, preserving the original commit.
-	//
-	// Example:
-	// Input: ['fix bug in payment gateway API']
-	// Output:
-	// [
-	//   {
-	//     \"commit\": \"fix bug in payment gateway API\",
-	//     \"resume_bullet\": \"Resolved a critical issue in the payment gateway API, ensuring reliable transactions and reducing failed payments by 20%.\"
-	//   }
-	// ]
-	//
-	// Now transform this array: %v
-	// 	`, commits)
-
-	test := `You are helping a developer write a resume from git commit messages.
-For each commit, create TWO versions:
-1. summary_bullet → short, simple, 1-sentence resume bullet.
-2. impact_bullet → more detailed, impact-focused resume bullet (can include metrics if implied).
-
-Guidelines:
-- Keep summary_bullet concise and direct.
-- Keep impact_bullet professional and slightly more comprehensive.
-- Output strictly as JSON.
-
-Example:
-Input: ['fix bug in login page']
-Output:
-[
-  {
-    \"commit\": \"fix bug in login page\",
-    \"summary_bullet\": \"Fixed a login issue to ensure smooth authentication.\",
-    \"impact_bullet\": \"Resolved a critical login issue, ensuring smooth authentication and improving overall user experience.\"
-  }
-]
-
-Now transform this array:
-
-[\"fix bug in iOS app\",
- \"Refactored code for better maintainability\",
- \"Improved performance by reducing cache size\"]
-`
-
-	resp, err := ai.GetStream(test)
+	chat := "You are a professional resume writer specializing in software engineering roles. Transform git commit messages into polished resume bullet points that highlight business value and technical achievements. Use action verbs, past tense, focus on impact, and keep concise (1-2 lines max). Output format: Single bullet point"
+	msg := "Transform this commit message into a resume bullet point:  chore(database): Setup bbolt database to store commit logs"
+	resp, err := ai.Chat([]string{chat, msg})
 	if err != nil {
 		return err
 	}
+
 	fmt.Println(resp)
 	return nil
+}
+
+func extractText(text string) string {
+	return strings.TrimSpace(text)
 }
