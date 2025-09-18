@@ -1,6 +1,6 @@
 export type CommitMessage = {
   msg: string;
-  timestamp: number;
+  ai?: string;
 };
 
 export type Project = {
