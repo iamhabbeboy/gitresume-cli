@@ -5,11 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io/fs"
 	"log"
 
-	// "log"
 	"net/http"
-	"os"
 
 	"github.com/iamhabbeboy/gitresume/internal/ai"
 	"github.com/iamhabbeboy/gitresume/internal/database"
@@ -17,8 +16,8 @@ import (
 	"github.com/iamhabbeboy/gitresume/util"
 )
 
-//go:embed templates/*.html
-var tmplFS embed.FS
+//go:embed web/dist/*
+var templateFS embed.FS
 
 var ch = make(chan Response)
 var db = database.GetInstance()
@@ -43,20 +42,22 @@ type AiRequest struct {
 	Commits []string `json:"commits"`
 }
 
+var assetsFS fs.FS
+var dist fs.FS
+var tmpl *template.Template
+
+func InitReactHandler() {
+	tmpl = template.Must(template.ParseFS(templateFS, "web/dist/*.html"))
+	assetsFS, _ = fs.Sub(templateFS, "web/dist/assets")
+
+	dist, err = fs.Sub(templateFS, "web/dist")
+	if err != nil {
+		panic(fmt.Errorf("failed to load dist: %w", err))
+	}
+}
+
 func IndexHandler(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := template.ParseFS(tmplFS, "templates/index.html")
-	if err != nil {
-		fmt.Println("Error loading template:", err)
-		os.Exit(1)
-	}
-	data := PageData{
-		Title:   "Welcome Page",
-		Message: "Hello from Go Template!",
-	}
-	err = tmpl.Execute(w, data)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	tmpl.ExecuteTemplate(w, "index.html", nil)
 }
 
 func ProjectHandler(w http.ResponseWriter, r *http.Request) {
