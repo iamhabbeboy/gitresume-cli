@@ -15,6 +15,10 @@ run:
 	@echo "Running..."
 	go run $(MAIN_FILE)
 
+## Build the React app 
+build-react:
+	@echo "Building React app..."
+	cd internal/server/web && bun run build
 ## Run the built binary
 start: build
 	@echo "Starting binary..."
