@@ -1,3 +1,5 @@
+import type { CommitMessage } from "../../types/project";
+
 export interface Dataprop {
   name: string;
   slug?: string;
@@ -48,5 +50,5 @@ export interface WorkExperience {
   location: string;
   dateFrom: string;
   dateTo?: string;
-  responsibilities: string[];
+  responsibilities: CommitMessage[];
 }

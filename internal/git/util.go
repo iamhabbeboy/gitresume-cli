@@ -6,7 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
+	// "strconv"
 	"strings"
 )
 
@@ -20,13 +20,15 @@ type GitUser struct {
 }
 
 type GitCommit struct {
-	Timestamp int64  `json:"timestamp"`
-	Msg       string `json:"msg"`
+	ID       int    `json:"commit_id"`
+	Msg      string `json:"message"`
+	AIGenMsg string `json:"ai_generated_msg"`
 }
 
 type Project struct {
-	ID      string      `json:"id"`
+	ID      int         `json:"id"`
 	Name    string      `json:"name"`
+	Path    string      `json:"path"`
 	Commits []GitCommit `json:"commits"`
 }
 
@@ -68,13 +70,13 @@ func (g *GitUtil) GetCommits(email string) ([]GitCommit, error) {
 	splt := strings.Split(logs, "\n")
 	for _, value := range splt {
 		log := strings.Split(value, "=")
-		timestampStr := log[0]
+		// timestampStr := log[0]
 		msg := log[1]
 
-		timestampInt, err := strconv.ParseInt(timestampStr, 10, 64)
-		if err != nil {
-			return nil, err
-		}
+		// timestampInt, err := strconv.ParseInt(timestampStr, 10, 64)
+		// if err != nil {
+		// 	return nil, err
+		// }
 
 		if strings.Contains(msg, "Merge") {
 			continue
@@ -83,8 +85,7 @@ func (g *GitUtil) GetCommits(email string) ([]GitCommit, error) {
 		stripMsg := strings.Replace(msg, "--author", "", 1)
 		stripMsg = strings.TrimSpace(stripMsg)
 		commits = append(commits, GitCommit{
-			Timestamp: timestampInt,
-			Msg:       stripMsg,
+			Msg: stripMsg,
 		})
 	}
 	return commits, nil

@@ -20,7 +20,6 @@ import (
 var templateFS embed.FS
 
 var ch = make(chan Response)
-var db = database.GetInstance()
 
 type PageData struct {
 	Title   string
@@ -28,7 +27,7 @@ type PageData struct {
 }
 
 type ProjectResponse struct {
-	ID string `json:"id"`
+	ID int `json:"id"`
 	git.Project
 }
 
@@ -71,6 +70,8 @@ func ProjectHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func getAllCommits() {
+	db := database.GetInstance()
+
 	result, err := db.GetAllProject()
 	resp := Response{
 		Message: "nothing to see",

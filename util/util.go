@@ -4,6 +4,7 @@ import (
 	"strings"
 )
 
+const APP_NAME = "gitresume"
 const PROJECT_BUCKET = "projects"
 
 func Slugify(s string) string {

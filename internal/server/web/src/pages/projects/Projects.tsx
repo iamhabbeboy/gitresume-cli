@@ -28,8 +28,8 @@ function Projects() {
     return (
       filter?.commits.map((c, i) => ({
         index: i,
-        msg: c.msg,
-        ai: c.ai ?? "",
+        msg: c.message,
+        ai: c.ai_generated_msg ?? "",
       })) ?? []
     );
   }, [store.projects, selectedProject]);
@@ -43,6 +43,7 @@ function Projects() {
       });
       store.updateCommit(selectedProject, index, data);
     } catch (e) {
+      console.log(e);
       alert(e);
     } finally {
       setIsLoading(-1);
@@ -59,7 +60,7 @@ function Projects() {
 
       const updatedCommits = data.map((c: string, i: number) => ({
         index: i,
-        msg: c,
+        message: c,
         ai: "",
       }));
 

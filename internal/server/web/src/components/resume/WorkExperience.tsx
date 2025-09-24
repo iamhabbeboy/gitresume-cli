@@ -35,7 +35,7 @@ const WorkExperience: React.FC<Props> = ({ work, index }) => {
       <div className="mt-3">
         <ul className=" list-disc  list-inside">
           {work.responsibilities.map((responsibility) => (
-            <li className="py-1">{responsibility}</li>
+            <li className="py-1">{responsibility.message}</li>
           ))}
         </ul>
       </div>

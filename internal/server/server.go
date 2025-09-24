@@ -1,13 +1,13 @@
 package server
 
 import (
-	"context"
+	// "context"
 	"fmt"
-	"os"
-	"os/signal"
-	"time"
+	"log"
+	// "os"
+	// "os/signal"
+	// "time"
 
-	"github.com/fatih/color"
 	"net"
 	"net/http"
 )
@@ -20,12 +20,6 @@ type Middleware func(http.Handler) http.Handler
 
 func Serve() {
 	mux := http.NewServeMux()
-
-	handlePort()
-	if listener == nil {
-		fmt.Println("No available ports found between 4000 and 4100")
-		os.Exit(1)
-	}
 
 	InitReactHandler()
 	mux.HandleFunc("/", IndexHandler)
@@ -41,75 +35,35 @@ func Serve() {
 	mux.HandleFunc("/api/ai", AiHandler)
 
 	middlewares := []Middleware{
-		corsSecurityMiddleware,
-		loggingMiddleware,
+		CORSSecurityMiddleware,
+		LoggingMiddleware,
 	}
 	handler := ApplyMiddleware(mux, middlewares...)
 
 	srv := &http.Server{
+		Addr:    fmt.Sprintf(":%d", startPort),
 		Handler: handler,
 	}
 
-	go func() {
-		if err := srv.Serve(listener); err != nil && err != http.ErrServerClosed {
-			fmt.Printf("Server error: %v \n", err)
-		}
-	}()
+	log.Printf("🚀 Server started on http://localhost:%d\n", startPort)
 
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Fatalf("Server error: %v \n", err)
+	}
 	// Keep command running until interrupted
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, os.Interrupt)
-	<-quit
-
-	fmt.Println("Shutting down server...")
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	if err := srv.Shutdown(ctx); err != nil {
-		fmt.Printf("Shutdown error: %v\n", err)
-	} else {
-		fmt.Println("Server stopped gracefully")
-	}
-}
-
-func corsSecurityMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
-}
-
-func ApplyMiddleware(h http.Handler, middlewares ...Middleware) http.Handler {
-	for i := len(middlewares) - 1; i >= 0; i-- {
-		h = middlewares[i](h)
-	}
-	return h
-}
-
-func loggingMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-		next.ServeHTTP(w, r)
-
-		methodColor := color.New(color.FgGreen).SprintFunc()
-		addrColor := color.New(color.FgCyan).SprintFunc()
-		otherColor := color.New(color.FgWhite).SprintFunc()
-		yellowColor := color.New(color.FgYellow).SprintFunc()
-
-		fmt.Printf("%s %s %s %s %s\n",
-			methodColor(r.Method),                          // e.g. GET in green
-			otherColor(r.URL.Path),                         // path in white
-			addrColor(r.RemoteAddr),                        // remote addr in cyan
-			otherColor("["+time.Since(start).String()+"]"), // duration in white
-			yellowColor(r.UserAgent()),                     // user agent in white
-		)
-	})
+	// quit := make(chan os.Signal, 1)
+	// signal.Notify(quit, os.Interrupt)
+	// <-quit
+	//
+	// fmt.Println("Shutting down server...")
+	// ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	// defer cancel()
+	//
+	// if err := srv.Shutdown(ctx); err != nil {
+	// 	fmt.Printf("Shutdown error: %v\n", err)
+	// } else {
+	// 	fmt.Println("Server stopped gracefully")
+	// }
 }
 
 func handlePort() {

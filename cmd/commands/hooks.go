@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,21 +14,19 @@ import (
 	"github.com/iamhabbeboy/gitresume/internal/git"
 	"github.com/iamhabbeboy/gitresume/internal/server"
 	"github.com/iamhabbeboy/gitresume/util"
-
-	"github.com/google/uuid"
 )
 
 type Hook struct {
 	config   *config.AppConfig
-	database database.Db
+	database database.IDatabase
 }
 
 func SetupHook() error {
-	project, err := os.Getwd()
+	path, err := os.Getwd()
 	if err != nil {
 		return err
 	}
-	gitutil := git.NewGitUtil(project)
+	gitutil := git.NewGitUtil(path)
 	user, err := gitutil.GetUserInfo()
 
 	if err != nil {
@@ -42,7 +41,7 @@ func SetupHook() error {
 		Email: strings.TrimSpace(user.Email),
 	}
 
-	err = config.AddProject(project, u)
+	err = config.AddProject(path, u)
 	if err != nil {
 		return err
 	}
@@ -51,26 +50,36 @@ func SetupHook() error {
 }
 
 func SeedHook() error {
-	project, err := os.Getwd() // get the current directory
+	project, err := os.Getwd()
 	db := database.GetInstance()
+	defer db.Close()
 
 	conf, err := config.GetProject(project)
-	e := strings.TrimSpace(conf.Email)
+	usrEmail := strings.TrimSpace(conf.Email)
 
 	gitutil := git.NewGitUtil(project)
-	logs, err := gitutil.GetCommits(e)
+	logs, err := gitutil.GetCommits(usrEmail)
 	if err != nil {
 		return err
 	}
 
-	defer db.Close()
-
-	key := uuid.New().String()
 	prj := git.Project{
 		Name:    filepath.Base(project),
+		Path:    project,
 		Commits: logs,
 	}
-	err = db.Store(key, prj)
+	p, err := db.GetProjectByName(prj.Name)
+	if err != nil {
+		return err
+	}
+
+	if p.Path == project {
+		return errors.New("project already exists")
+	}
+
+	if err = db.Store(prj); err != nil {
+		return err
+	}
 	return nil
 }
 

@@ -3,14 +3,15 @@ module github.com/iamhabbeboy/gitresume
 go 1.23.3
 
 require (
+	github.com/fatih/color v1.18.0
 	github.com/google/uuid v1.6.0
+	github.com/mattn/go-sqlite3 v1.14.32
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.20.1
 	go.etcd.io/bbolt v1.4.2
 )
 
 require (
-	github.com/fatih/color v1.18.0 // indirect
 	github.com/fsnotify/fsnotify v1.8.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect

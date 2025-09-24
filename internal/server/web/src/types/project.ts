@@ -1,6 +1,7 @@
 export type CommitMessage = {
-  msg: string;
-  ai?: string;
+  commit_id: number;
+  message: string;
+  ai_generated_msg?: string;
 };
 
 export type Project = {

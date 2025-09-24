@@ -73,12 +73,12 @@ var dashboardCmd = &cobra.Command{
 	Use:   "serve",
 	Short: "Web app dashboard for your dev report",
 	Run: func(cmd *cobra.Command, args []string) {
-		err := commands.DashboardHook()
-		if err != nil {
-			fmt.Println("Failed to start dashboard server:", err)
-		} else {
-			fmt.Println("🚀 Starting server ....")
-		}
+		commands.DashboardHook()
+		// if err != nil {
+		// 	fmt.Println("Failed to start dashboard server:", err)
+		// } else {
+		// 	fmt.Println("🚀 Starting server ....")
+		// }
 	},
 }
 

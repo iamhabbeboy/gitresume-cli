@@ -32,7 +32,6 @@ export const useStore = create<ProjectStore & Action>()((set) => ({
       });
     }
   },
-
   updateCommits: (projectName: string, commits: CommitMessage[]) => {
     set((state) => ({
       projects: state.projects.map((p) =>
@@ -52,7 +51,7 @@ export const useStore = create<ProjectStore & Action>()((set) => ({
           ? {
               ...p,
               commits: p.commits.map((c, i) =>
-                i === index ? { ...c, ai } : c,
+                i === index ? { ...c, ai_generated_msg: ai } : c,
               ),
             }
           : p,

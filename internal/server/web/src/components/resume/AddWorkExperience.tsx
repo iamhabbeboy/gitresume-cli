@@ -1,7 +1,10 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Modal from "../Modal";
 import type { WorkExperience } from "./type";
 import { useResumeStore } from "../../store/resumeStore";
+import { useStore } from "../../store";
+import Select, { type MultiValue } from "react-select";
+import type { CommitMessage } from "../../types/project";
 
 interface Prop {
   isOpen: boolean;
@@ -9,6 +12,18 @@ interface Prop {
 }
 
 const AddWorkExperience: React.FC<Prop> = ({ isOpen, setIsOpen }) => {
+  const store = useStore();
+
+  useEffect(() => {
+    store.fetchProjects();
+    // eslint-disable-next-line
+  }, []);
+
+  const projectList = useMemo(
+    () => store.projects.map((p) => ({ label: p.name, value: p.name })),
+    [store.projects],
+  );
+
   const [workExperiences, setWorkExperiences] = useState<WorkExperience>({
     company: "",
     role: "",
@@ -19,16 +34,32 @@ const AddWorkExperience: React.FC<Prop> = ({ isOpen, setIsOpen }) => {
   });
   const { addWorkExperiences } = useResumeStore((state) => state);
 
-  const [responsibilities, setResponsibilities] = useState<string[]>([]);
+  const [responsibilities, setResponsibilities] = useState<CommitMessage[]>([]);
   const [responsibility, setResponsibility] = useState<string>("");
+  const [projects, setProjects] = useState<string[]>([]);
 
   const handleResponsibility = () => {
-    setResponsibilities([...responsibilities, responsibility]);
+    setResponsibilities([
+      ...responsibilities,
+      { commit_id: 0, message: responsibility },
+    ]);
     setResponsibility("");
   };
 
   const handleAddWrk = () => {
     workExperiences.responsibilities = responsibilities;
+
+    if (projects.length > 0) {
+      const projectResp = store.projects.filter((p) =>
+        projects.includes(p.name),
+      );
+      const commits = projectResp.flatMap((p) => p.commits);
+      workExperiences.responsibilities = [
+        ...workExperiences.responsibilities,
+        ...commits,
+      ];
+    }
+
     addWorkExperiences([workExperiences]);
     setIsOpen(false);
     setWorkExperiences({
@@ -41,6 +72,7 @@ const AddWorkExperience: React.FC<Prop> = ({ isOpen, setIsOpen }) => {
     });
     setResponsibilities([]);
     setResponsibility("");
+    setProjects([]);
   };
   return (
     <section>
@@ -163,12 +195,15 @@ const AddWorkExperience: React.FC<Prop> = ({ isOpen, setIsOpen }) => {
               >
                 Select project(s)
               </label>
-              <select className="w-full p-10 h-8 bg-white dark:bg-gray-700 dark:text-white">
-                <option>Select project(s)</option>
-                <option>Project 1</option>
-                <option>Project 2</option>
-                <option>Project 3</option>
-              </select>
+              <Select
+                isMulti
+                options={projectList}
+                className="h-8 bg-white dark:bg-gray-700 dark:text-white"
+                onChange={(e: MultiValue<{ label: string; value: string }>) => {
+                  const values = e.map((item) => item.value);
+                  setProjects([...projects, ...values]);
+                }}
+              />
             </div>
 
             {responsibilities.length > 0 && (

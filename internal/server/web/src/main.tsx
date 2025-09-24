@@ -2,6 +2,8 @@ import { createRoot } from "react-dom/client";
 import "./index.css";
 
 import { createBrowserRouter, RouterProvider } from "react-router";
+import CreateResume from "./pages/resume/Create.tsx";
+import Resume from "./pages/resume/Resume.tsx";
 
 const router = createBrowserRouter([
   {
@@ -21,9 +23,19 @@ const router = createBrowserRouter([
   {
     path: "/resumes",
     lazy: async () => {
-      const module = await import("./pages/resume/Resume.tsx");
+      const module = await import("./components/resume/ResumeLayout.tsx");
       return { Component: module.default };
     },
+    children: [
+      {
+        index: true,
+        element: <Resume />,
+      },
+      {
+        path: "create",
+        element: <CreateResume />,
+      },
+    ],
   },
   {
     path: "/interview",
