@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+
 	// "strconv"
 	"strings"
 )
@@ -20,9 +21,15 @@ type GitUser struct {
 }
 
 type GitCommit struct {
-	ID       int    `json:"commit_id"`
-	Msg      string `json:"message"`
-	AIGenMsg string `json:"ai_generated_msg"`
+	ID        int    `json:"commit_id"`
+	Msg       string `json:"message"`
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
+}
+
+type CustomUpdateCommit struct {
+	ProjectID int `json:"project_id"`
+	GitCommit
 }
 
 type Project struct {

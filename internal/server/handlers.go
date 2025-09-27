@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"io/fs"
 	"log"
+	"strconv"
 
 	"net/http"
 
@@ -41,6 +42,10 @@ type AiRequest struct {
 	Commits []string `json:"commits"`
 }
 
+type CommitUpdateRequest struct {
+	Data []git.CustomUpdateCommit `json:"data"`
+}
+
 var assetsFS fs.FS
 var dist fs.FS
 var tmpl *template.Template
@@ -60,6 +65,23 @@ func IndexHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func ProjectHandler(w http.ResponseWriter, r *http.Request) {
+	db := database.GetInstance()
+	idStr := GetID(w, r.URL.Path)
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "invalid project ID", http.StatusBadRequest)
+		return
+	}
+
+	resp, _ := db.GetAllCommitSummary(id)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK) // optional, defaults to 200
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func ProjectsHandler(w http.ResponseWriter, r *http.Request) {
 	go getAllCommits()
 	resp := <-ch
 	w.Header().Set("Content-Type", "application/json")
@@ -72,7 +94,7 @@ func ProjectHandler(w http.ResponseWriter, r *http.Request) {
 func getAllCommits() {
 	db := database.GetInstance()
 
-	result, err := db.GetAllProject()
+	result, err := db.GetAllProject(0, 0)
 	resp := Response{
 		Message: "nothing to see",
 		Status:  http.StatusOK,
@@ -99,7 +121,6 @@ func getAllCommits() {
 	resp.Message = "success"
 	resp.Data = data
 	ch <- resp
-	return
 }
 
 func AiHandler(w http.ResponseWriter, r *http.Request) {
@@ -114,11 +135,13 @@ func AiHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	chat := "You are a professional resume writer specializing in software engineering roles. Transform git commit messages into polished resume bullet points that highlight business value and technical achievements. Use action verbs, past tense, focus on impact, and keep concise (1-2 lines max). Output format: Each bullet point according to the input"
-	msg := fmt.Sprintf(`Transform this commit message into a resume bullets point and make it concise and non-ai or non-robotic: %s`, util.ToUserContent(req.Commits))
+	// sys := "You are a professional resume writer specializing in software engineering roles. Transform git commit messages into polished resume bullet points that highlight business value and technical achievements. Use action verbs, past tense, focus on impact, and keep concise (1-2 lines max). Output format: Each bullet point according to the input"
+	// msg := fmt.Sprintf(`Transform this commit message into a resume bullets point and make it concise and non-ai or non-robotic: %s`, util.ToUserContent(req.Commits))
+	sys := "You are a professional resume writer specializing in software engineering roles. Transform git commit messages into polished resume bullet points that highlight business value and technical achievements. Use action verbs, past tense, focus on impact, and keep concise (1-2 lines max). Output format: Single bullet point starting with •"
+	msg := fmt.Sprintf(`Transform this commit message into a resume bullet point: %s`, util.ToUserContent(req.Commits))
 
 	ai := ai.NewChatModel(ai.Llama)
-	resp, err := ai.Chat([]string{chat, msg})
+	resp, err := ai.Chat([]string{sys, msg})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusMethodNotAllowed)
 		return
@@ -126,4 +149,32 @@ func AiHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(resp)
+}
+
+func BulkUpdateCommitMessageHandler(w http.ResponseWriter, r *http.Request) {
+	db := database.GetInstance()
+	if r.Method != http.MethodPut {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req CommitUpdateRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	err = db.BulkUpdateCommit(req.Data)
+
+	fmt.Println(err)
+
+	resp := Response{
+		Message: "success",
+		Status:  http.StatusCreated,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(resp)
+
 }

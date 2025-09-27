@@ -4,6 +4,8 @@ import (
 	// "context"
 	"fmt"
 	"log"
+	"strings"
+
 	// "os"
 	// "os/signal"
 	// "time"
@@ -30,9 +32,11 @@ func Serve() {
 	mux.Handle("/manifest.json", http.FileServer(http.FS(dist)))
 	mux.Handle("/loading.svg", http.FileServer(http.FS(dist)))
 
-	mux.HandleFunc("/api/projects", ProjectHandler)
-
+	// API endpoints
+	mux.HandleFunc("/api/projects", ProjectsHandler)
+	mux.HandleFunc("/api/projects/{id}", ProjectHandler)
 	mux.HandleFunc("/api/ai", AiHandler)
+	mux.HandleFunc("/api/commits/bulk-update", BulkUpdateCommitMessageHandler)
 
 	middlewares := []Middleware{
 		CORSSecurityMiddleware,
@@ -76,4 +80,15 @@ func handlePort() {
 			break
 		}
 	}
+}
+
+func GetID(w http.ResponseWriter, path string) string {
+	pathParts := strings.Split(path, "/")
+	if len(pathParts) < 4 || pathParts[1] != "api" {
+		http.Error(w, "invalid URL", http.StatusBadRequest)
+		return ""
+	}
+
+	idStr := pathParts[3]
+	return idStr
 }

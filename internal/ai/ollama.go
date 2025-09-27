@@ -14,11 +14,13 @@ type LlamaConfig struct {
 }
 
 type Request struct {
-	Model  string `json:"model"`
-	Prompt string `json:"prompt"`
-	Stream bool   `json:"stream"`
-	Format string `json:"format"`
-	Raw    bool   `json:"raw"`
+	Model       string  `json:"model"`
+	Prompt      string  `json:"prompt"`
+	Stream      bool    `json:"stream"`
+	Format      string  `json:"format"`
+	Raw         bool    `json:"raw"`
+	Temperature float64 `json:"temperature"`
+	N           int     `json:"n"`
 }
 
 type Response struct {
@@ -61,10 +63,12 @@ func NewLlama() *LlamaConfig {
 
 func (l *LlamaConfig) Generate(message string) (string, error) {
 	data := Request{
-		Model:  AIModel,
-		Prompt: message,
-		Stream: false,
-		Raw:    true,
+		Model:       AIModel,
+		Prompt:      message,
+		Stream:      false,
+		Raw:         true,
+		N:           1,
+		Temperature: 0.0,
 	}
 
 	msg, err := json.Marshal(data)

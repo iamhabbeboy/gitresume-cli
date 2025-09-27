@@ -50,11 +50,11 @@ func SetupHook() error {
 }
 
 func SeedHook() error {
-	project, err := os.Getwd()
+	project, _ := os.Getwd()
 	db := database.GetInstance()
 	defer db.Close()
 
-	conf, err := config.GetProject(project)
+	conf, _ := config.GetProject(project)
 	usrEmail := strings.TrimSpace(conf.Email)
 
 	gitutil := git.NewGitUtil(project)

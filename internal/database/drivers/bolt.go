@@ -55,6 +55,18 @@ func (d *Db) Delete(key string) error {
 	return nil
 }
 
+func (d *Db) GetCommitById(id int) (git.GitCommit, error) {
+	return git.GitCommit{}, nil
+}
+
+func (s *Db) BulkUpdateCommit(commits []git.CustomUpdateCommit) error {
+	return nil
+}
+
+func (s *Db) GetAllCommitSummary(projectID int) ([]git.CustomUpdateCommit, error) {
+	return nil, nil
+}
+
 func (d *Db) Store(data git.Project) error {
 	key := uuid.New().String()
 	err := d.Db.Update(func(tx *bolt.Tx) error {
@@ -79,7 +91,7 @@ func (d *Db) Store(data git.Project) error {
 	return nil
 }
 
-func (d *Db) GetAllProject() ([]git.Project, error) {
+func (d *Db) GetAllProject(limit, offset int) ([]git.Project, error) {
 	var results []git.Project
 
 	err := d.Db.View(func(tx *bolt.Tx) error {

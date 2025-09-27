@@ -9,3 +9,7 @@ export type Project = {
   name: string;
   commits: CommitMessage[];
 };
+
+export type CustomCommitMessage = CommitMessage & {
+  project_id: number;
+};

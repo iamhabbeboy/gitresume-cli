@@ -2,8 +2,8 @@ package drivers
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 
@@ -22,7 +22,7 @@ type sqliteDB struct {
 }
 
 func NewSqlite() (*sqliteDB, error) {
-	home, err := os.UserHomeDir()
+	home, _ := os.UserHomeDir()
 	dbPath := filepath.Join(home, "."+util.APP_NAME, DEV_COMMIT_SQLITE_DB_FILE)
 	if err := os.MkdirAll(filepath.Dir(dbPath), 0755); err != nil {
 		return nil, err
@@ -53,7 +53,7 @@ func (s *sqliteDB) Store(data git.Project) error {
 		tx.Rollback()
 		return err
 	}
-	prjID, err := row.LastInsertId()
+	prjID, _ := row.LastInsertId()
 	// store commits
 	placeholders := make([]string, 0, len(data.Commits))
 	value := make([]any, 0, len(data.Commits)*2)
@@ -63,7 +63,7 @@ func (s *sqliteDB) Store(data git.Project) error {
 		value = append(value, prjID, v.Msg)
 	}
 	query := fmt.Sprintf(
-		"INSERT INTO commits (project_id, msg) VALUES %s",
+		"INSERT INTO commits (project_id, message) VALUES %s",
 		strings.Join(placeholders, ","),
 	)
 	_, err = tx.Exec(query, value...)
@@ -92,47 +92,165 @@ func (s *sqliteDB) GetProjectByName(n string) (git.Project, error) {
 	}
 
 	return git.Project{Name: name, Path: path}, nil
-
 }
 
-func (s *sqliteDB) GetAllProject() ([]git.Project, error) {
+func (s *sqliteDB) BulkUpdateCommit(commits []git.CustomUpdateCommit) error {
+	tx, err := s.conn.Begin()
+	if err != nil {
+		return err
+	}
 	query := `
-    SELECT 
-       p.id AS id,
-       p.name AS name,
-       JSON_GROUP_ARRAY(
-         JSON_OBJECT(
-            'commit_id', c.id,
-            'message', c.msg,
-            'created_at', c.created_at
-         )
-       ) AS commits
-    FROM projects p
-    LEFT JOIN commits c
-      ON p.id = c.project_id
-    GROUP BY p.id, p.name;
-  `
+	   INSERT INTO commit_summary (project_id, commit_id, summary, created_at, updated_at)
+        VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        ON CONFLICT(project_id, commit_id)
+        DO UPDATE SET 
+            summary = excluded.summary,
+            updated_at = CURRENT_TIMESTAMP;
+	`
+	stmt, err := tx.Prepare(query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	for _, v := range commits {
+		var commitID sql.NullInt64
+		if v.ID == 0 {
+			commitID = sql.NullInt64{Valid: false}
+		} else {
+			commitID = sql.NullInt64{Int64: int64(v.ID), Valid: true}
+		}
+		res, err := stmt.Exec(v.ProjectID, commitID, v.Msg)
+		if err != nil {
+			_ = tx.Rollback()
+			log.Fatal(err)
+		}
+		rowsAffected, err := res.RowsAffected()
+		if err != nil {
+			_ = tx.Rollback()
+			log.Fatal(err)
+		}
+		if rowsAffected == 0 {
+			fmt.Printf("⚠️ Record with id=%d does not exist, skipping update\n", v.ID)
+		} else {
+			fmt.Printf("✅ Updated record id=%d\n", v.ID)
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		log.Fatal(err)
+	}
+	return nil
+}
+
+func (s *sqliteDB) GetCommitById(id int) (git.GitCommit, error) {
+	var (
+		msg string
+	)
+	err := s.conn.QueryRow("SELECT message FROM projects WHERE id = ?", id).
+		Scan(&msg)
+
+	if err == sql.ErrNoRows {
+		return git.GitCommit{}, nil
+	}
+
+	if err != nil {
+		return git.GitCommit{}, err
+	}
+
+	return git.GitCommit{
+		Msg: msg,
+	}, nil
+}
+
+func (s *sqliteDB) GetAllCommitSummary(prjID int) ([]git.CustomUpdateCommit, error) {
+	query := `
+		SELECT id, summary, created_at FROM commit_summary WHERE project_id = ?
+	`
+	rows, err := s.conn.Query(query, prjID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var summaries []git.CustomUpdateCommit
+	for rows.Next() {
+		var (
+			summary   string
+			id        int
+			createdAt string
+		)
+		if err := rows.Scan(&id, &summary, &createdAt); err != nil {
+			return nil, err
+		}
+		summaries = append(summaries, git.CustomUpdateCommit{
+			ProjectID: id,
+			GitCommit: git.GitCommit{
+				Msg:       summary,
+				CreatedAt: createdAt,
+			},
+		})
+	}
+
+	return summaries, nil
+}
+
+func (s *sqliteDB) GetAllProject(limit, offset int) ([]git.Project, error) {
+	query := `
+	SELECT 
+		p.id AS project_id,
+		p.name AS project_name,
+		c.id AS commit_id,
+		c.message,
+		c.created_at,
+		c.updated_at
+	FROM projects p
+	LEFT JOIN commits c
+    ON p.id = c.project_id;
+	`
 	rows, err := s.conn.Query(query)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var projects []git.Project
+
+	projectsMap := make(map[int]*git.Project)
+
 	for rows.Next() {
-		var project git.Project
-		var commitJSON string
-		err := rows.Scan(&project.ID, &project.Name, &commitJSON)
+		var (
+			projectID        int
+			projectName      string
+			commitID         sql.NullInt64
+			commitMsg        sql.NullString
+			commitDate       sql.NullString
+			commitUpdateDate sql.NullString
+		)
+		err := rows.Scan(&projectID, &projectName, &commitID, &commitMsg, &commitDate, &commitUpdateDate)
 		if err != nil {
 			return nil, err
 		}
-		if commitJSON != "" {
-			var commits []git.GitCommit
-			if err := json.Unmarshal([]byte(commitJSON), &commits); err != nil {
-				return nil, err
+
+		if _, exists := projectsMap[projectID]; !exists {
+			projectsMap[projectID] = &git.Project{
+				ID:      projectID,
+				Name:    projectName,
+				Commits: []git.GitCommit{},
 			}
-			project.Commits = commits
 		}
-		projects = append(projects, project)
+		if commitID.Valid {
+			projectsMap[projectID].Commits = append(
+				projectsMap[projectID].Commits,
+				git.GitCommit{
+					ID:        int(commitID.Int64),
+					Msg:       commitMsg.String,
+					CreatedAt: commitDate.String,
+					UpdatedAt: commitUpdateDate.String,
+				},
+			)
+		}
+	}
+
+	var projects []git.Project
+	for _, p := range projectsMap {
+		projects = append(projects, *p)
 	}
 	return projects, nil
 }

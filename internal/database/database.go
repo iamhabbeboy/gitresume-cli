@@ -8,9 +8,12 @@ import (
 type IDatabase interface {
 	GetProjectByName(name string) (git.Project, error)
 	Store(data git.Project) error
-	GetAllProject() ([]git.Project, error)
+	GetAllProject(limit, offset int) ([]git.Project, error)
 	Delete(key string) error
 	Close() error
+	GetCommitById(id int) (git.GitCommit, error)
+	BulkUpdateCommit(commits []git.CustomUpdateCommit) error
+	GetAllCommitSummary(projectID int) ([]git.CustomUpdateCommit, error)
 }
 
 type DBName string
