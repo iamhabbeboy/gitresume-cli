@@ -9,6 +9,7 @@ export interface Dataprop {
 export interface ValueProps {
   value: string;
   url?: string;
+  data?: string;
 }
 
 export interface TableProps {
@@ -16,18 +17,24 @@ export interface TableProps {
 }
 
 export interface Resume {
+  id?: number;
+  user_id?: number;
+  version?: number;
+  title?: string;
+  is_published?: boolean;
   profile: Profile;
   skills: string[];
   education: Education[];
-  workExperiences: Array<WorkExperience>;
+  work_experiences: WorkExperience[];
 }
 
 export interface Education {
+  id?: number;
   school: string;
   degree: string;
-  fieldOfStudy: string;
-  dateFrom: string;
-  dateTo?: string;
+  field_of_study: string;
+  date_from: string;
+  date_to?: string;
 }
 
 export interface Links {
@@ -41,14 +48,19 @@ export interface Profile {
   email: string;
   links: Links[];
   phone: string;
+  professional_summary: string;
+  location: string;
   website: string;
 }
 
 export interface WorkExperience {
+  id?: number;
   company: string;
-  role: string;
+  job_title: string;
   location: string;
-  dateFrom: string;
-  dateTo?: string;
-  responsibilities: CommitMessage[];
+  start_date: string;
+  end_date?: string;
+  is_current?: boolean;
+  project_ids: number[];
+  responsibilities: string;
 }

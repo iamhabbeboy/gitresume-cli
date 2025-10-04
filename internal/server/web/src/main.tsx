@@ -35,6 +35,10 @@ const router = createBrowserRouter([
         path: "create",
         element: <CreateResume />,
       },
+      {
+        path: ":id",
+        element: <CreateResume />,
+      },
     ],
   },
   {

@@ -1,8 +1,8 @@
 interface Props {
   title: string;
   children: React.ReactNode;
-  isOpen: boolean;
-  setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  isOpen: number | null;
+  setIsOpen: React.Dispatch<React.SetStateAction<number | null>>;
 }
 const Modal: React.FC<Props> = ({ isOpen, title, children, setIsOpen }) => {
   return (
@@ -10,7 +10,11 @@ const Modal: React.FC<Props> = ({ isOpen, title, children, setIsOpen }) => {
       <div
         tabIndex={-1}
         aria-hidden="true"
-        className={`${isOpen ? "bg-gray-900/50 dark:bg-gray-900/80 fixed inset-0 z-40 flex justify-center" : "hidden"} modal overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full`}
+        className={`${
+          isOpen
+            ? "bg-gray-900/50 dark:bg-gray-900/80 fixed inset-0 z-40 flex justify-center"
+            : "hidden"
+        } modal overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full`}
       >
         <div className="relative p-4 w-full max-w-md max-h-full">
           <div className="relative bg-white rounded-lg shadow-sm dark:bg-gray-700">
@@ -22,7 +26,7 @@ const Modal: React.FC<Props> = ({ isOpen, title, children, setIsOpen }) => {
                 type="button"
                 className="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center dark:hover:bg-gray-600 dark:hover:text-white"
                 data-modal-toggle="crud-modal"
-                onClick={() => setIsOpen(false)}
+                onClick={() => setIsOpen(null)}
               >
                 <svg
                   className="w-3 h-3"

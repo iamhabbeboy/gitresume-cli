@@ -38,6 +38,46 @@ func (d *Db) Close() error {
 	return d.Db.Close()
 }
 
+func (d *Db) Migrate() error {
+	return nil
+}
+
+func (s *Db) UpdateResume(uID int64, req git.Resume) error {
+	return nil
+}
+
+func (s *Db) UpdateUser(uID int64, req git.Profile) error {
+	return nil
+}
+
+func (s *Db) GetResumes() ([]git.Resume, error) {
+	return nil, nil
+}
+
+func (d *Db) GetUser(email string) (git.Profile, error) {
+	return git.Profile{}, nil
+}
+
+func (d *Db) GetUserByID(uID int32) (git.Profile, error) {
+	return git.Profile{}, nil
+}
+
+func (d *Db) GetResume(ID int64) (git.Resume, error) {
+	return git.Resume{}, nil
+}
+
+func (s *Db) CreateEducation(data git.Education) (git.Education, error) {
+	return git.Education{}, nil
+}
+
+func (d *Db) CreateUser(data git.Profile) (int64, error) {
+	return 0, nil
+}
+
+func (d *Db) CreateResume(r git.Resume) (git.Resume, error) {
+	return git.Resume{}, nil
+}
+
 func (d *Db) GetProjectByName(name string) (git.Project, error) {
 	return git.Project{}, nil
 }
@@ -59,7 +99,7 @@ func (d *Db) GetCommitById(id int) (git.GitCommit, error) {
 	return git.GitCommit{}, nil
 }
 
-func (s *Db) BulkUpdateCommit(commits []git.CustomUpdateCommit) error {
+func (s *Db) UpsertCommit(commits []git.CustomUpdateCommit) error {
 	return nil
 }
 

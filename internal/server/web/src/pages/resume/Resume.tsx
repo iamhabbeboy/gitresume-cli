@@ -1,54 +1,47 @@
+import { useEffect, useState } from "react";
 import Table from "../../components/resume/Table";
-import type { TableProps } from "../../components/resume/type";
+import type {
+  Resume as ResumeType,
+  TableProps,
+} from "../../components/resume/type";
+import { useResumeStore } from "../../store/resumeStore";
 
 const Resume: React.FC = () => {
+  const { fetchResumes } = useResumeStore();
+  const [resumes, setResumes] = useState<ResumeType[]>([]);
+  useEffect(() => {
+    (async () => {
+      const resp = await fetchResumes();
+      setResumes(resp ?? []);
+    })();
+  }, []);
+
   const table: TableProps = {
     data: [
       {
-        name: "Role",
-        values: [
-          {
-            value: "Python Developer",
-          },
-          {
-            value: "Nodejs Developer",
-          },
-        ],
+        name: "Title",
+        values: resumes.map((res) => ({
+          value: res.title ?? "",
+          data: res.id,
+        })),
       },
       {
         name: "Stack",
-        values: [
-          {
-            value: "Javascript, Typescript, Nodejs",
-          },
-          {
-            value: "Python, Flask, Django",
-          },
-        ],
+        values: resumes.map((res) => ({
+          value: res.skills.join(", "),
+        })),
       },
       {
-        name: "Category",
-        values: [
-          {
-            value: "Backend",
-          },
-          {
-            value: "Backend",
-          },
-        ],
+        name: "Version",
+        values: resumes.map((res) => ({
+          value: "version " + String(res.version),
+        })),
       },
       {
-        name: "Action",
-        values: [
-          {
-            value: "Edit",
-            url: "http://edit",
-          },
-          {
-            value: "Delete",
-            url: "http://delete",
-          },
-        ],
+        name: "Published",
+        values: resumes.map((res) => ({
+          value: res.is_published ? "Published 🚀" : "Draft",
+        })),
       },
     ],
   };

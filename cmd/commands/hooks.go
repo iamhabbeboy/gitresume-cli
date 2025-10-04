@@ -16,12 +16,13 @@ import (
 	"github.com/iamhabbeboy/gitresume/util"
 )
 
-type Hook struct {
-	config   *config.AppConfig
-	database database.IDatabase
-}
+var db = database.GetInstance()
 
 func SetupHook() error {
+	if err := db.Migrate(); err != nil {
+		return err
+	}
+
 	path, err := os.Getwd()
 	if err != nil {
 		return err
@@ -46,13 +47,29 @@ func SetupHook() error {
 		return err
 	}
 
+	p, err := db.GetUser(user.Email)
+	if err != nil {
+		return err
+	}
+
+	if p.ID > 0 {
+		return errors.New("gitresume config already exists")
+	}
+	_, err = db.CreateUser(git.Profile{
+		Name:         user.Name,
+		Email:        user.Email,
+		PasswordHash: "admin",
+	})
+
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func SeedHook() error {
 	project, _ := os.Getwd()
-	db := database.GetInstance()
-	defer db.Close()
 
 	conf, _ := config.GetProject(project)
 	usrEmail := strings.TrimSpace(conf.Email)

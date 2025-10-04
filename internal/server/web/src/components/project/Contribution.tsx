@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useStore } from "../../store";
 import ReactMarkdown from "react-markdown";
 import type { CommitMessage } from "../../types/project";
@@ -10,23 +10,13 @@ const Contribution: React.FC<{ selectedProject: Prop | null }> = (
   const store = useStore();
   const [index, setIndex] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(-1);
-  const [commitIsLoading, setCommitIsLoading] = useState(false);
+  const [tab, setTab] = useState(0);
+  // const [commitIsLoading, setCommitIsLoading] = useState(false);
 
   const [commits, setCommits] = useState<CommitMessage[]>([]);
 
-  // const commits = useMemo(() => {
-  //   if (!store.projects) return [];
-  //   const filter = store.projects.find((p) => p.name === selectedProject);
-  //   return (
-  //     filter?.commits || []
-  //   );
-  // }, [store.projects, selectedProject]);
-
-  useEffect(() => {
-    handleFetchCommits(0);
-  }, []);
-
-  const handleFetchCommits = (index: number = 0) => {
+  const handleFetchCommits = useCallback((index: number = 0) => {
+    setTab(index);
     let result = [];
     const filter = store.projects.find((p) =>
       Number(p.id) === selectedProject?.id
@@ -37,27 +27,21 @@ const Contribution: React.FC<{ selectedProject: Prop | null }> = (
       result = translatedCommits;
     }
     setCommits(result);
-  };
+  }, [selectedProject?.id, store.commits, store.projects]);
+
+  useEffect(() => {
+    handleFetchCommits(0);
+  }, [handleFetchCommits]);
 
   const handleImproveAllWithAI = async () => {
     try {
-      setCommitIsLoading(true);
       const messages = commits.map((c) => c.message);
-      store.updateAllCommitsWithAI(selectedProject?.name as string, messages);
-      // const { data } = await axios.post(`${baseUri}/api/ai`, {
-      //   commits: messages,
-      // });
-
-      // const summary = data.map((value: string) => ({
-      //   message: value,
-      //   project_id: 1,
-      // }));
-      // store.updateCommitsWithAI(selectedProject, summary);
-      // store.updateCommits(selectedProject, updatedCommits);
+      if (messages.length === 0) {
+        return alert("An error occurred, you have an empty commit messages");
+      }
+      store.updateAllCommitsWithAI(selectedProject?.id as number, messages);
     } catch (e) {
       console.log(e);
-    } finally {
-      setCommitIsLoading(false);
     }
   };
 
@@ -76,7 +60,7 @@ const Contribution: React.FC<{ selectedProject: Prop | null }> = (
         commit_id: commitId,
         message: msg,
       }];
-      store.updateCommitsWithAI(selectedProject?.name as string, output);
+      store.updateCommitsWithAI(selectedProject?.id as number, output);
     } catch (e) {
       console.log(e);
       alert(e);
@@ -103,7 +87,7 @@ const Contribution: React.FC<{ selectedProject: Prop | null }> = (
             className="flex justify-between bg-cyan-600 text-white px-10 py-2 rounded-lg text-xs hover:bg-cyan-700"
             onClick={() => handleImproveAllWithAI()}
           >
-            Improve with AI {commitIsLoading && (
+            Improve with AI {store.loading && (
               <img
                 src="/loading.svg"
                 alt="ai"
@@ -113,16 +97,29 @@ const Contribution: React.FC<{ selectedProject: Prop | null }> = (
           </button>
         </div>
       </div>
-      <div className="flex items-center w-full">
+      <div className="flex items-center w-full border-b border-gray-300">
+        <div className="p-0 m-0">
+          <h4 className="text-md text-cyan-800 mt-2">
+            {tab === 0 ? "Original Commit Logs" : "Translated/Updated Logs "}
+          </h4>
+        </div>
         <div className="ml-auto">
           <button
-            className="underline hover:no-underline text-sm text-blue-400 mr-2"
+            className={`${
+              tab === 0
+                ? "bg-blue-400 hover:bg-blue-800 text-white"
+                : "text-blue-400"
+            } border px-5 py-2  text-sm rounded-md mr-2`}
             onClick={() => handleFetchCommits(0)}
           >
             Original
           </button>
           <button
-            className="underline hover:no-underline text-sm text-gray-700 mr-2"
+            className={` ${
+              tab === 1
+                ? "bg-blue-400 hover:bg-blue-800 text-white"
+                : "text-blue-400"
+            } border px-5 py-2 text-sm text-blue-400 rounded-md`}
             onClick={() => handleFetchCommits(1)}
           >
             Translated

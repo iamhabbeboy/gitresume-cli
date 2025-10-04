@@ -1,11 +1,30 @@
-import { Link, Outlet } from "react-router";
+import { Link, Outlet, useNavigate, useParams } from "react-router";
 import Layout from "../Layout";
 import { useLocation } from "react-router";
+import { useResumeStore } from "../../store/resumeStore";
+import { useEffect } from "react";
 
 const ResumeLayout = () => {
   const location = useLocation();
-  console.log(location);
+  const router = useNavigate();
+  const { id } = useParams();
+
+  const store = useResumeStore();
   const isCreate = location.pathname === "/resumes/create";
+  const handleCreateResume = async () => {
+    const resp = await store.createResume();
+    if (resp.id) {
+      return router(`/resumes/${resp.id}`);
+    }
+    return alert("An error occured while creating a new resume");
+  };
+
+  useEffect(() => {
+    if (id) {
+      store.fetchResumeById(Number(id));
+    }
+  }, []);
+
   return (
     <Layout>
       <div className="w-full">
@@ -20,8 +39,9 @@ const ResumeLayout = () => {
           </div>
           <div>
             <Link
-              to={`${isCreate ? "#" : "/resumes/create"}`}
+              to={`${isCreate ? "#" : "#"}`}
               className="flex justify-between bg-cyan-600 text-white px-10 py-2 rounded-lg text-xs hover:bg-cyan-700"
+              onClick={handleCreateResume}
             >
               {isCreate ? "Publish" : "Create resume"}
             </Link>

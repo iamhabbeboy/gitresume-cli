@@ -17,13 +17,10 @@ type ProjectStore = {
 type Action = {
   fetchProjects: () => void;
   updateCommits: (projectName: string, commits: CommitMessage[]) => void;
-  bulkUpdateCommit: (
-    projectName: string,
-    payload: CustomCommitMessage[],
-  ) => void;
-  updateCommitsWithAI: (projectName: string, commits: CommitMessage[]) => void;
-  updateAllCommitsWithAI: (projectName: string, commits: string[]) => void;
-  fetchCommitSummary: (projectId: number) => void;
+  bulkUpdateCommit: (projectID: number, payload: CustomCommitMessage[]) => void;
+  updateCommitsWithAI: (projectID: number, commits: CommitMessage[]) => void;
+  updateAllCommitsWithAI: (projectID: number, commits: string[]) => void;
+  fetchCommitSummary: (projectId: number) => Promise<CommitMessage[]>;
 };
 
 export const useStore = create<ProjectStore & Action>()((set, get) => ({
@@ -45,44 +42,46 @@ export const useStore = create<ProjectStore & Action>()((set, get) => ({
       });
     }
   },
-  fetchCommitSummary: async (projectId: number) => {
+  fetchCommitSummary: async (projectId: number): Promise<CommitMessage[]> => {
     try {
+      set({ commits: [], loading: true });
       const { data } = await axios.post(`${baseUri}/api/projects/${projectId}`);
       set({ commits: data, loading: false });
+      return data;
     } catch (e) {
       console.error(e);
+      return [];
     }
   },
-  updateAllCommitsWithAI: async (projectName: string, commits: string[]) => {
+  updateAllCommitsWithAI: async (projectID: number, commits: string[]) => {
     try {
       const { data } = await axios.post(`${baseUri}/api/ai`, {
-        commits: commits,
+        commits,
       });
-      console.log(data);
-      const payload: CustomCommitMessage[] = data.map((c: string) => ({
-        project_id: 1,
+
+      const payload = data.map((c: string) => ({
+        project_id: projectID,
+        commit_id: 0,
         message: c,
       }));
 
-      get().bulkUpdateCommit(projectName, payload);
+      get().bulkUpdateCommit(projectID, payload);
     } catch (e) {
       console.log(e);
     }
   },
-  updateCommitsWithAI: async (
-    projectName: string,
-    commits: CommitMessage[],
-  ) => {
+  updateCommitsWithAI: async (projectID: number, commits: CommitMessage[]) => {
     try {
       const { data } = await axios.post(`${baseUri}/api/ai`, {
         commits: commits,
       });
-      const payload: CustomCommitMessage[] = data.map((c) => ({
-        project_id: 1,
+      const payload = data.map((c: CustomCommitMessage) => ({
+        project_id: projectID,
+        commit_id: c.commit_id ?? 0,
         message: c,
       }));
 
-      get().bulkUpdateCommit(projectName, payload);
+      get().bulkUpdateCommit(projectID, payload);
     } catch (err) {
       set({
         error: "Failed to translate commit messages:" + JSON.stringify(err),
@@ -103,7 +102,7 @@ export const useStore = create<ProjectStore & Action>()((set, get) => ({
     }));
   },
   bulkUpdateCommit: async (
-    projectName: string,
+    projectID: number,
     payload: CustomCommitMessage[],
   ) => {
     try {
@@ -116,8 +115,9 @@ export const useStore = create<ProjectStore & Action>()((set, get) => ({
       );
 
       set((state) => ({
+        loading: false,
         projects: state.projects.map((p) =>
-          p.name === projectName
+          Number(p.id) === projectID
             ? {
               ...p,
               commits: p.commits.map((c) =>

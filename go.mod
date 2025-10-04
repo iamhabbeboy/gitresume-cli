@@ -1,6 +1,8 @@
 module github.com/iamhabbeboy/gitresume
 
-go 1.23.3
+go 1.24.0
+
+toolchain go1.24.7
 
 require (
 	github.com/fatih/color v1.18.0
@@ -9,6 +11,7 @@ require (
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.20.1
 	go.etcd.io/bbolt v1.4.2
+	golang.org/x/crypto v0.42.0
 )
 
 require (
@@ -26,7 +29,7 @@ require (
 	github.com/subosito/gotenv v1.6.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
-	golang.org/x/sys v0.29.0 // indirect
-	golang.org/x/text v0.21.0 // indirect
+	golang.org/x/sys v0.36.0 // indirect
+	golang.org/x/text v0.29.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

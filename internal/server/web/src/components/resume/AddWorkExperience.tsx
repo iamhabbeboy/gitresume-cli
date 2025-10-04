@@ -7,11 +7,12 @@ import Select, { type MultiValue } from "react-select";
 import type { CommitMessage } from "../../types/project";
 
 interface Prop {
-  isOpen: boolean;
-  setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  isOpen: number | null;
+  setIsOpen: React.Dispatch<React.SetStateAction<number | null>>;
+  data: WorkExperience | null;
 }
 
-const AddWorkExperience: React.FC<Prop> = ({ isOpen, setIsOpen }) => {
+const AddWorkExperience: React.FC<Prop> = ({ isOpen, setIsOpen, data }) => {
   const store = useStore();
 
   useEffect(() => {
@@ -20,23 +21,27 @@ const AddWorkExperience: React.FC<Prop> = ({ isOpen, setIsOpen }) => {
   }, []);
 
   const projectList = useMemo(
-    () => store.projects.map((p) => ({ label: p.name, value: p.name })),
+    () => store.projects.map((p) => ({ label: p.name, value: p.id })),
     [store.projects],
   );
 
   const [workExperiences, setWorkExperiences] = useState<WorkExperience>({
-    company: "",
-    role: "",
-    location: "",
-    dateFrom: "",
-    dateTo: "",
+    company: data?.company ?? "",
+    role: data?.role ?? "",
+    location: data?.location ?? "",
+    dateFrom: data?.dateFrom ?? "",
+    dateTo: data?.dateTo ?? "",
     responsibilities: [],
   });
   const { addWorkExperiences } = useResumeStore((state) => state);
 
   const [responsibilities, setResponsibilities] = useState<CommitMessage[]>([]);
   const [responsibility, setResponsibility] = useState<string>("");
-  const [projects, setProjects] = useState<string[]>([]);
+  const [projects, setProjects] = useState<
+    Array<{ label: string; value: string }>
+  >([]);
+  const [hasProjectSelected, setHasProjectSelected] = useState(false);
+  const [messageType, setMessageType] = useState<number>(0);
 
   const handleResponsibility = () => {
     setResponsibilities([
@@ -46,22 +51,43 @@ const AddWorkExperience: React.FC<Prop> = ({ isOpen, setIsOpen }) => {
     setResponsibility("");
   };
 
-  const handleAddWrk = () => {
-    workExperiences.responsibilities = responsibilities;
+  const handleProjectSelection = (
+    e: MultiValue<{ label: string; value: string }>,
+  ) => {
+    // const values = e.map((item) => item.value);
+    setProjects([...projects, ...e]);
+    setHasProjectSelected(!!e.length);
+  };
 
-    if (projects.length > 0) {
-      const projectResp = store.projects.filter((p) =>
-        projects.includes(p.name),
-      );
-      const commits = projectResp.flatMap((p) => p.commits);
-      workExperiences.responsibilities = [
-        ...workExperiences.responsibilities,
-        ...commits,
-      ];
+  const handleAddWrk = async () => {
+    workExperiences.responsibilities = responsibilities;
+    let commits: CommitMessage[] = [];
+
+    if (projects.length == 0) {
+      return;
     }
 
-    addWorkExperiences([workExperiences]);
-    setIsOpen(false);
+    const originalCommitLogs = store.projects.filter((p) =>
+      projects.some((prj) => prj.value === p.id)
+    );
+
+    const flatProjects = originalCommitLogs.flatMap((c) => c.commits);
+    commits = flatProjects;
+
+    if (messageType == 1) {
+      const translatedCommits = await Promise.all(
+        projects.map((p) => store.fetchCommitSummary(Number(p.value))),
+      );
+      commits = translatedCommits.flat();
+    }
+
+    workExperiences.responsibilities = [
+      ...workExperiences.responsibilities,
+      ...commits,
+    ];
+    const projectIDs = projects.map((p) => p.value);
+    addWorkExperiences([workExperiences], projectIDs);
+    setIsOpen(null);
     setWorkExperiences({
       company: "",
       role: "",
@@ -199,11 +225,18 @@ const AddWorkExperience: React.FC<Prop> = ({ isOpen, setIsOpen }) => {
                 isMulti
                 options={projectList}
                 className="h-8 bg-white dark:bg-gray-700 dark:text-white"
-                onChange={(e: MultiValue<{ label: string; value: string }>) => {
-                  const values = e.map((item) => item.value);
-                  setProjects([...projects, ...values]);
-                }}
+                onChange={handleProjectSelection}
               />
+
+              {hasProjectSelected && (
+                <select
+                  className="h-8 bg-white dark:bg-gray-700 dark:text-white mt-5 w-full"
+                  onChange={(e) => setMessageType(Number(e.target.value))}
+                >
+                  <option value="0">Default</option>
+                  <option value="1">Translated</option>
+                </select>
+              )}
             </div>
 
             {responsibilities.length > 0 && (
@@ -211,7 +244,7 @@ const AddWorkExperience: React.FC<Prop> = ({ isOpen, setIsOpen }) => {
                 <ul className="list-disc list-inside">
                   {responsibilities.map((value, indx) => (
                     <li className="text-gray-500 dark:text-gray-50" key={indx}>
-                      {value}
+                      {value.message}
                     </li>
                   ))}
                 </ul>
@@ -222,7 +255,7 @@ const AddWorkExperience: React.FC<Prop> = ({ isOpen, setIsOpen }) => {
                 htmlFor="description"
                 className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
               >
-                Work Achievement
+                Or Add your Work Achievement
               </label>
               <textarea
                 id="description"
@@ -231,7 +264,8 @@ const AddWorkExperience: React.FC<Prop> = ({ isOpen, setIsOpen }) => {
                 placeholder="Write your work achievement"
                 onChange={(e) => setResponsibility(e.target.value)}
                 value={responsibility}
-              ></textarea>
+              >
+              </textarea>
               <button
                 onClick={handleResponsibility}
                 className="underline text-xs text-gray-50 cursor-pointer hover:no-underline"
@@ -255,7 +289,8 @@ const AddWorkExperience: React.FC<Prop> = ({ isOpen, setIsOpen }) => {
                 fillRule="evenodd"
                 d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
                 clipRule="evenodd"
-              ></path>
+              >
+              </path>
             </svg>
             Add
           </button>

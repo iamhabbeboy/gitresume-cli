@@ -1,7 +1,6 @@
 import type { TableProps } from "./type";
 
 const Table: React.FC<TableProps> = ({ data }) => {
-  // assume all columns have the same row length
   const rowCount = data[0]?.values.length || 0;
   return (
     <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
@@ -10,11 +9,14 @@ const Table: React.FC<TableProps> = ({ data }) => {
           <th scope="col" className="px-6 py-3">
             #{" "}
           </th>
-          {data.map((v) => (
-            <th scope="col" className="px-6 py-3">
+          {data.map((v, k) => (
+            <th scope="col" className="px-6 py-3" key={k}>
               {v.name}
             </th>
           ))}
+          <th scope="col" className="px-6 py-3 text-right">
+            Action
+          </th>
         </tr>
       </thead>
       <tbody>
@@ -34,18 +36,26 @@ const Table: React.FC<TableProps> = ({ data }) => {
                 scope="row"
                 className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white"
               >
-                {col.values[rowIndex]?.url ? (
-                  <a
-                    href={col.values[rowIndex].url}
-                    className="font-medium text-blue-600 dark:text-blue-500 hover:underline"
-                  >
-                    {col.values[rowIndex].value}
-                  </a>
-                ) : (
-                  col.values[rowIndex]?.value || ""
-                )}
+                {col.values[rowIndex]?.value || ""}
               </th>
             ))}
+            <th
+              scope="row"
+              className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white text-right"
+            >
+              <a
+                href={`/resumes/${data[0]?.values[rowIndex].data}`}
+                className="font-medium text-blue-600 dark:text-blue-500 hover:underline"
+              >
+                Edit
+              </a>
+              <a
+                href="#"
+                className="ml-3 font-medium text-blue-600 dark:text-blue-500 hover:underline"
+              >
+                Delete
+              </a>
+            </th>
           </tr>
         ))}
       </tbody>

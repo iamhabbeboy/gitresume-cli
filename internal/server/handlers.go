@@ -21,6 +21,7 @@ import (
 var templateFS embed.FS
 
 var ch = make(chan Response)
+var db = database.GetInstance()
 
 type PageData struct {
 	Title   string
@@ -33,9 +34,9 @@ type ProjectResponse struct {
 }
 
 type Response struct {
-	Message string            `json:"message"`
-	Status  int               `json:"status"`
-	Data    []ProjectResponse `json:"data"`
+	Message string `json:"message"`
+	Status  int    `json:"status"`
+	Data    any    `json:"data"`
 }
 
 type AiRequest struct {
@@ -65,7 +66,6 @@ func IndexHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func ProjectHandler(w http.ResponseWriter, r *http.Request) {
-	db := database.GetInstance()
 	idStr := GetID(w, r.URL.Path)
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -92,8 +92,6 @@ func ProjectsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func getAllCommits() {
-	db := database.GetInstance()
-
 	result, err := db.GetAllProject(0, 0)
 	resp := Response{
 		Message: "nothing to see",
@@ -152,7 +150,6 @@ func AiHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func BulkUpdateCommitMessageHandler(w http.ResponseWriter, r *http.Request) {
-	db := database.GetInstance()
 	if r.Method != http.MethodPut {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -165,9 +162,11 @@ func BulkUpdateCommitMessageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = db.BulkUpdateCommit(req.Data)
-
-	fmt.Println(err)
+	err = db.UpsertCommit(req.Data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	resp := Response{
 		Message: "success",
@@ -177,4 +176,148 @@ func BulkUpdateCommitMessageHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(resp)
 
+}
+
+func CreateResumeHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req git.Resume
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// res, err = db.GetResume(0)
+	res, err := db.CreateResume(req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// resp := Response{
+	// 	Message: "success",
+	// 	Status:  http.StatusCreated,
+	// }
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(res)
+
+}
+
+func GetResumeHandler(w http.ResponseWriter, r *http.Request) {
+	idStr := GetID(w, r.URL.Path)
+	userID, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "invalid project ID: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	res, err := db.GetResume(int64(userID))
+	if err != nil {
+		http.Error(w, "error: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// res := Response{
+	// 	Message: "success",
+	// 	Status:  http.StatusCreated,
+	// }
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(res)
+}
+
+func GetAllResumesHandler(w http.ResponseWriter, r *http.Request) {
+	res, err := db.GetResumes()
+	if err != nil {
+		http.Error(w, "error: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// res := Response{
+	// 	Message: "success",
+	// 	Status:  http.StatusCreated,
+	// }
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(res)
+}
+
+func UserHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req git.Profile
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Println(req)
+	res := "Hello world"
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(res)
+}
+
+func GetUserHandler(w http.ResponseWriter, r *http.Request) {
+	idStr := GetID(w, r.URL.Path)
+	userID, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "invalid project ID: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	res, err := db.GetUserByID(int32(userID))
+	if err != nil {
+		http.Error(w, "failed to retrieve users: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(res)
+}
+
+func UpdateResumeHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	idStr := GetID(w, r.URL.Path)
+	userID, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "invalid project ID: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var req git.Resume
+	err = json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Println(userID)
+	j, _ := json.Marshal(req)
+	fmt.Println(j)
+	// if err = db.UpdateResume(int64(userID), req); err != nil {
+	// 	http.Error(w, "error occured: "+err.Error(), http.StatusBadRequest)
+	// 	return
+	// }
+
+	res := Response{
+		Message: "resume updated successfully",
+		Status:  http.StatusCreated,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(res)
 }

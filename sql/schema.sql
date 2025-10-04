@@ -2,6 +2,10 @@ CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     email TEXT NOT NULL UNIQUE,
+    phone TEXT,
+    location TEXT,
+    professional_summary TEXT,
+    links TEXT,
     password_hash TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -52,16 +56,52 @@ CREATE TABLE resumes (
     user_id INTEGER NOT NULL, 
     version INTEGER NOT NULL,
     title TEXT DEFAULT 'Untitled Resume',
-    content TEXT NOT NULL,
+    skills TEXT,
     is_published BOOLEAN DEFAULT 0,
     published_at DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    UNIQUE(user_id, version)
-
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+CREATE TABLE work_experiences (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    resume_id INTEGER NOT NULL,
+    company TEXT,
+    role VARCHAR(200),
+    location VARCHAR(200),
+    start_date DATETIME,
+    end_date DATETIME,
+    projects TEXT,
+    responsibilities TEXT,
+    is_translated BOOLEAN DEFAULT 0,
+    FOREIGN KEY (resume_id) REFERENCES resumes(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_work_experiences_resume_id ON work_experiences(resume_id);
+
+CREATE TABLE work_experience_projects (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    work_experience_id INTEGER NOT NULL,
+    project_id INTEGER NOT NULL,
+    FOREIGN KEY (work_experience_id) REFERENCES work_experiences(id) ON DELETE CASCADE,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+    UNIQUE(work_experience_id, project_id)
+);
+CREATE INDEX idx_work_experience_projects_wid ON work_experience_projects(work_experience_id);
+CREATE INDEX idx_work_experience_projects_pid ON work_experience_projects(project_id);
+
+
+CREATE TABLE educations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    resume_id INTEGER NOT NULL,
+    school TEXT,
+    degree TEXT,
+    field_of_study TEXT,
+    start_date DATETIME,
+    end_date DATETIME,
+    FOREIGN KEY (resume_id) REFERENCES resumes(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_educations_resume_id ON educations(resume_id);
 
 
 -- Users

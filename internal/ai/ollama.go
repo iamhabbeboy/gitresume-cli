@@ -21,6 +21,7 @@ type Request struct {
 	Raw         bool    `json:"raw"`
 	Temperature float64 `json:"temperature"`
 	N           int     `json:"n"`
+	TopP        int     `json:"top_p"`
 }
 
 type Response struct {
@@ -69,6 +70,7 @@ func (l *LlamaConfig) Generate(message string) (string, error) {
 		Raw:         true,
 		N:           1,
 		Temperature: 0.0,
+		TopP:        1,
 	}
 
 	msg, err := json.Marshal(data)
