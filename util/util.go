@@ -2,6 +2,8 @@ package util
 
 import (
 	"encoding/json"
+	// "fmt"
+	"reflect"
 	"strings"
 
 	"golang.org/x/crypto/bcrypt"
@@ -37,15 +39,30 @@ func VeryHash(hash []byte, pwdStr string) error {
 }
 
 func ConvertNullToSlice[T any](b []byte, out *[]T) error {
-	if len(b) == 0 || string(b) == "null" {
+	s := strings.TrimSpace(string(b))
+	if s == "" || s == "null" {
 		*out = []T{}
 		return nil
 	}
-
 	var tmp []T
 	if err := json.Unmarshal(b, &tmp); err != nil {
 		return err
 	}
-	*out = tmp
+
+	isEmpty := false
+	if len(tmp) == 0 {
+		// v := tmp[0]
+		// fmt.Println(reflect.DeepEqual(tmp[0], *new(T)))
+		if reflect.DeepEqual(tmp[0], *new(T)) {
+			isEmpty = true
+		}
+	}
+
+	if isEmpty {
+		*out = []T{}
+	} else {
+		*out = tmp
+	}
+
 	return nil
 }

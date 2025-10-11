@@ -55,25 +55,37 @@ func Serve() {
 			UpdateResumeHandler(w, r)
 		case http.MethodGet:
 			GetResumeHandler(w, r)
+		case http.MethodDelete:
+			DeleteResumesHandler(w, r)
 		default:
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
 	})
 	mux.HandleFunc("/api/commits/bulk-update", BulkUpdateCommitMessageHandler)
-	mux.HandleFunc("/api/educations", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/work-experiences/{id}", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPut:
+			CreateOrUpdateWorkExperiencesHandler(w, r)
+		case http.MethodDelete:
+			DeleteWorkExperienceHandler(w, r)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+	mux.HandleFunc("/api/educations/{id}", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
 			GetEducationHandler(w, r)
-		case http.MethodPost:
-			CreateEducationHandler(w, r)
 		case http.MethodPut:
-			UpdateEducationHandler(w, r)
+			CreateOrUpdateEducationHandler(w, r)
 		case http.MethodDelete:
 			DeleteEducationHandler(w, r)
 		default:
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
 	})
+
+	mux.HandleFunc("/api/export", ExportResumeHandler)
 
 	middlewares := []Middleware{
 		CORSSecurityMiddleware,

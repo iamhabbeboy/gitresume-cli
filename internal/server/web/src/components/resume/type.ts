@@ -33,8 +33,7 @@ export interface Education {
   school: string;
   degree: string;
   field_of_study: string;
-  date_from: string;
-  date_to?: string;
+  end_date?: string;
 }
 
 export interface Links {
@@ -56,11 +55,16 @@ export interface Profile {
 export interface WorkExperience {
   id?: number;
   company: string;
-  job_title: string;
+  role: string;
   location: string;
   start_date: string;
   end_date?: string;
   is_current?: boolean;
-  project_ids: number[];
+  projects: string[];
   responsibilities: string;
+}
+
+export interface OptionType {
+  label: string;
+  value: number;
 }

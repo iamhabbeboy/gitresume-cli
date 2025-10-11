@@ -13,6 +13,7 @@ import (
 
 	"github.com/iamhabbeboy/gitresume/internal/ai"
 	"github.com/iamhabbeboy/gitresume/internal/database"
+	"github.com/iamhabbeboy/gitresume/internal/export"
 	"github.com/iamhabbeboy/gitresume/internal/git"
 	"github.com/iamhabbeboy/gitresume/util"
 )
@@ -190,20 +191,27 @@ func CreateResumeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// j, _ := json.Marshal(req)
+	// fmt.Println(string(j))
 	// res, err = db.GetResume(0)
-	res, err := db.CreateResume(req)
+	resume, err := db.CreateResume(req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// resp := Response{
-	// 	Message: "success",
-	// 	Status:  http.StatusCreated,
-	// }
+	resp := Response{
+		Message: "success",
+		Status:  http.StatusCreated,
+		Data: struct {
+			ID int64 `json:"id"`
+		}{
+			ID: resume.ID,
+		},
+	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(res)
+	json.NewEncoder(w).Encode(resp)
 
 }
 
@@ -291,7 +299,7 @@ func UpdateResumeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	idStr := GetID(w, r.URL.Path)
-	userID, err := strconv.Atoi(idStr)
+	rID, err := strconv.Atoi(idStr)
 	if err != nil {
 		http.Error(w, "invalid project ID: "+err.Error(), http.StatusBadRequest)
 		return
@@ -304,20 +312,165 @@ func UpdateResumeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println(userID)
-	j, _ := json.Marshal(req)
-	fmt.Println(j)
-	// if err = db.UpdateResume(int64(userID), req); err != nil {
-	// 	http.Error(w, "error occured: "+err.Error(), http.StatusBadRequest)
-	// 	return
-	// }
+	wkID, err := db.UpdateResume(int64(rID), req)
+	if err != nil {
+		http.Error(w, "error occured: "+err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	res := Response{
 		Message: "resume updated successfully",
 		Status:  http.StatusCreated,
+		Data: struct {
+			ID int64 `json:"id"`
+		}{
+			ID: wkID,
+		},
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(res)
+}
+
+func DeleteResumesHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println(r.Method)
+	if r.Method != http.MethodDelete {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	idStr := GetID(w, r.URL.Path)
+	rID, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "invalid resume ID: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	if err := db.DeleteResume(int64(rID)); err != nil {
+		http.Error(w, "error: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	res := Response{
+		Message: "resume deleted successfully",
+		Status:  http.StatusCreated,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(res)
+}
+
+func DeleteWorkExperienceHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	idStr := GetID(w, r.URL.Path)
+	wkID, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "invalid work experience ID: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	if err := db.DeleteWorkExperience(int64(wkID)); err != nil {
+		http.Error(w, "invalid work experience ID: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	res := Response{
+		Message: "work experience deleted successfully",
+		Status:  http.StatusCreated,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(res)
+}
+
+func CreateOrUpdateWorkExperiencesHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	idStr := GetID(w, r.URL.Path)
+	rID, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "invalid project ID: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var req git.Resume
+	err = json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	wkIDs, err := db.CreateOrUpdateWorkExperiences(int64(rID), req.WorkExperiences)
+	if err != nil {
+		http.Error(w, "error occured: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	res := Response{
+		Message: "resume updated successfully",
+		Status:  http.StatusCreated,
+		Data: struct {
+			ID []int64 `json:"ids"`
+		}{
+			ID: wkIDs,
+		},
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(res)
+}
+
+func ExportResumeHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		Data string `json:"data"`
+	}
+	err = json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	query := r.URL.Query()
+	etype := query.Get("format")
+	var (
+		format      export.ExportType
+		contentType string
+		ext         string
+	)
+	switch etype {
+	case "pdf":
+		format = export.PDF
+		ext = "pdf"
+		contentType = "application/pdf"
+	case "md":
+		format = export.Markdown
+		ext = "md"
+		contentType = "text/markdown; charset=utf-8"
+	case "docx":
+		format = export.Doc
+		ext = "docx"
+		contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+	}
+	exp, _ := export.NewExport(format)
+	defer exp.Close()
+	buf, err := exp.Export(req.Data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", contentType)
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=resume.%v", ext))
+	// w.Header().Set("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+	// w.Header().Set("Content-Disposition", "attachment; filename=\"resume.docx\"")
+	// w.Header().Set("Content-Transfer-Encoding", "binary")
+	// w.Header().Set("Cache-Control", "no-store")
+
+	w.Write(buf)
 }

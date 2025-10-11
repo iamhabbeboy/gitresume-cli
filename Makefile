@@ -1,14 +1,19 @@
 # Project variables
 BINARY_NAME := gitresume
 MAIN_FILE := ./main.go
+INSTALL_PATH := /usr/local/bin
+BUILD_DIR=bin
 
 .PHONY: all build run clean test lint
 
 ## Build the binary
-build:
+build: 
 	@echo "Building..."
 	go build -o bin/$(BINARY_NAME) $(MAIN_FILE)
-	cp bin/$(BINARY_NAME) /usr/local/bin
+	@echo "✅ Build complete: $(BUILD_DIR)/$(BINARY_NAME)"
+	@echo "📦 Installing to $(INSTALL_PATH)..."
+# 	cp bin/$(BINARY_NAME) /usr/local/bin
+	@cp $(BUILD_DIR)/$(BINARY_NAME) $(INSTALL_PATH)
 
 ## Run the project (without building)
 run:

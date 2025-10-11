@@ -39,20 +39,20 @@ type Education struct {
 	School       string `json:"school"`
 	Degree       string `json:"degree"`
 	FieldOfStudy string `json:"field_of_study"`
-	StartDate    string `json:"end_date"`
+	StartDate    string `json:"start_date"`
 	EndDate      string `json:"end_date"`
 }
 
 type WorkExperience struct {
-	Company          string  `json:"company"`
-	Role             string  `json:"role"`
-	Location         string  `json:"location"`
-	StartDate        string  `json:"start_date"`
-	EndDate          string  `json:"end_date"`
-	IsTranslated     bool    `json:"is_translated"`
-	Projects         string  `json:"project"`
-	ProjectIDs       []int32 `json:"project_ids"`
-	Responsibilities string  `json:"responsibilities"`
+	ID               int64  `json:"id"`
+	Company          string `json:"company"`
+	Role             string `json:"role"`
+	Location         string `json:"location"`
+	StartDate        string `json:"start_date"`
+	EndDate          string `json:"end_date"`
+	IsTranslated     bool   `json:"is_translated"`
+	Projects         string `json:"projects"`
+	Responsibilities string `json:"responsibilities"`
 }
 
 type Responsibility struct {

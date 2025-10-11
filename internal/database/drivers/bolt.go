@@ -42,11 +42,23 @@ func (d *Db) Migrate() error {
 	return nil
 }
 
-func (s *Db) UpdateResume(uID int64, req git.Resume) error {
+func (c *Db) CreateOrUpdateWorkExperiences(rID int64, w []git.WorkExperience) ([]int64, error) {
+	return nil, nil
+}
+
+func (c *Db) DeleteWorkExperience(wID int64) error {
 	return nil
 }
 
+func (s *Db) UpdateResume(uID int64, req git.Resume) (int64, error) {
+	return 0, nil
+}
+
 func (s *Db) UpdateUser(uID int64, req git.Profile) error {
+	return nil
+}
+
+func (c *Db) DeleteResume(rID int64) error {
 	return nil
 }
 
@@ -66,8 +78,12 @@ func (d *Db) GetResume(ID int64) (git.Resume, error) {
 	return git.Resume{}, nil
 }
 
-func (s *Db) CreateEducation(data git.Education) (git.Education, error) {
-	return git.Education{}, nil
+func (c *Db) DeleteEducation(wID int64) error {
+	return nil
+}
+
+func (s *Db) CreateOrUpdateEducation(rID int64, data []git.Education) ([]int64, error) {
+	return nil, nil
 }
 
 func (d *Db) CreateUser(data git.Profile) (int64, error) {

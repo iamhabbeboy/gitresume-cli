@@ -12,6 +12,7 @@ const ResumeLayout = () => {
   const store = useResumeStore();
   const isCreate = location.pathname === "/resumes/create";
   const handleCreateResume = async () => {
+    store.resetResume();
     const resp = await store.createResume();
     if (resp.id) {
       return router(`/resumes/${resp.id}`);
@@ -23,7 +24,7 @@ const ResumeLayout = () => {
     if (id) {
       store.fetchResumeById(Number(id));
     }
-  }, []);
+  }, [id]);
 
   return (
     <Layout>

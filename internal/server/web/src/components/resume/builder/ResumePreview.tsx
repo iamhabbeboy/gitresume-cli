@@ -65,7 +65,7 @@ export default function ResumePreview({ data }: ResumePreviewProps) {
         )}
 
         {/* Experience */}
-        {data.work_experiences.length > 0 && (
+        {(data.work_experiences || []).length > 0 && (
           <div>
             <h2 className="text-lg font-semibold text-primary mb-3">
               Experience
@@ -76,8 +76,7 @@ export default function ResumePreview({ data }: ResumePreviewProps) {
                   <div className="flex justify-between items-start mb-1">
                     <div>
                       <h3 className="font-semibold text-foreground">
-                        {exp.job_title ||
-                          "Position Title"}
+                        {exp.role || "Position Title"}
                       </h3>
                       <p className="text-sm text-muted-foreground">
                         {exp.company || "Company Name"}
@@ -117,8 +116,8 @@ export default function ResumePreview({ data }: ResumePreviewProps) {
               Education
             </h2>
             <div className="space-y-3">
-              {data.education.map((edu) => (
-                <div key={edu.id}>
+              {data.education.map((edu, i) => (
+                <div key={i}>
                   <div className="flex justify-between items-start">
                     <div>
                       <h3 className="font-semibold text-foreground">

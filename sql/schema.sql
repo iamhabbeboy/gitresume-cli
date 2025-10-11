@@ -79,16 +79,16 @@ CREATE TABLE work_experiences (
 );
 CREATE INDEX idx_work_experiences_resume_id ON work_experiences(resume_id);
 
-CREATE TABLE work_experience_projects (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    work_experience_id INTEGER NOT NULL,
-    project_id INTEGER NOT NULL,
-    FOREIGN KEY (work_experience_id) REFERENCES work_experiences(id) ON DELETE CASCADE,
-    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
-    UNIQUE(work_experience_id, project_id)
-);
-CREATE INDEX idx_work_experience_projects_wid ON work_experience_projects(work_experience_id);
-CREATE INDEX idx_work_experience_projects_pid ON work_experience_projects(project_id);
+-- CREATE TABLE work_experience_projects (
+--     id INTEGER PRIMARY KEY AUTOINCREMENT,
+--     work_experience_id INTEGER NOT NULL,
+--     project_id INTEGER NOT NULL,
+--     FOREIGN KEY (work_experience_id) REFERENCES work_experiences(id) ON DELETE CASCADE,
+--     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+--     UNIQUE(work_experience_id, project_id)
+-- );
+-- CREATE INDEX idx_work_experience_projects_wid ON work_experience_projects(work_experience_id);
+-- CREATE INDEX idx_work_experience_projects_pid ON work_experience_projects(project_id);
 
 
 CREATE TABLE educations (

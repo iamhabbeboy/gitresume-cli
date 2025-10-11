@@ -11,7 +11,7 @@ const Contribution: React.FC<{ selectedProject: Prop | null }> = (
   const [index, setIndex] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(-1);
   const [tab, setTab] = useState(0);
-  // const [commitIsLoading, setCommitIsLoading] = useState(false);
+  const [commitIsLoading, setCommitIsLoading] = useState(false);
 
   const [commits, setCommits] = useState<CommitMessage[]>([]);
 
@@ -35,6 +35,7 @@ const Contribution: React.FC<{ selectedProject: Prop | null }> = (
 
   const handleImproveAllWithAI = async () => {
     try {
+      setCommitIsLoading(true);
       const messages = commits.map((c) => c.message);
       if (messages.length === 0) {
         return alert("An error occurred, you have an empty commit messages");
@@ -42,6 +43,8 @@ const Contribution: React.FC<{ selectedProject: Prop | null }> = (
       store.updateAllCommitsWithAI(selectedProject?.id as number, messages);
     } catch (e) {
       console.log(e);
+    } finally {
+      setCommitIsLoading(false);
     }
   };
 
@@ -87,7 +90,7 @@ const Contribution: React.FC<{ selectedProject: Prop | null }> = (
             className="flex justify-between bg-cyan-600 text-white px-10 py-2 rounded-lg text-xs hover:bg-cyan-700"
             onClick={() => handleImproveAllWithAI()}
           >
-            Improve with AI {store.loading && (
+            Improve with AI {commitIsLoading && (
               <img
                 src="/loading.svg"
                 alt="ai"

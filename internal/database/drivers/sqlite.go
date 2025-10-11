@@ -38,6 +38,11 @@ func NewSqlite() (*sqliteDB, error) {
 		return nil, err
 	}
 
+	_, err = db.Exec("PRAGMA foreign_keys = ON")
+	if err != nil {
+		return nil, err
+	}
+
 	return &sqliteDB{conn: db}, nil
 }
 
@@ -318,7 +323,7 @@ func (s *sqliteDB) CreateResume(r git.Resume) (git.Resume, error) {
 	query := `
 	   INSERT INTO resumes (user_id, version, title, created_at, updated_at)
 	    VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) `
-	row, err := s.conn.Exec(query, r.UserID, r.Version, r.Title)
+	row, err := s.conn.Exec(query, uID, r.Version, r.Title)
 	if err != nil {
 		return git.Resume{}, err
 	}
@@ -346,39 +351,64 @@ func (s *sqliteDB) GetResume(ID int64) (git.Resume, error) {
 		links                sql.NullString
 		professional_summary sql.NullString
 
-		//education
-		education sql.NullString
+		education      sql.NullString
+		workExperience sql.NullString
 	)
 
-	query := `SELECT 
-			resumes.title,
-			resumes.skills,
-			resumes.is_published,
-			users.name AS user_name,
-			users.email,
-			users.phone,
-			users.location,
-			users.professional_summary,
-			users.links,
-			COALESCE(
-				json_group_array(
-					json_object(
-						'id', educations.id,
-						'school', educations.school,
-						'degree', educations.degree,
-						'start_date', educations.start_date,
-						'end_date', educations.end_date
-					)
-				), '[]'
-			) AS educations
-		FROM resumes
-		LEFT JOIN users ON resumes.user_id = users.id
-		LEFT JOIN educations ON resumes.id = educations.resume_id
-		WHERE resumes.id = ?
-		GROUP BY resumes.id;`
+	query := `
+SELECT
+    resumes.title,
+    resumes.skills,
+    resumes.is_published,
+    users.name,
+    users.email,
+    users.phone,
+    users.location,
+    users.professional_summary,
+    users.links,
+
+    -- EDUCATIONS
+    COALESCE((
+        SELECT json_group_array(
+            json_object(
+                'id', e.id,
+				'resume_id', e.resume_id,
+                'school', e.school,
+                'degree', e.degree,
+				'field_of_study', e.field_of_study,
+                'end_date', e.end_date
+            )
+        )
+        FROM educations e
+        WHERE e.resume_id = resumes.id
+    ), '[]') AS educations,
+
+    -- WORK EXPERIENCES
+    COALESCE((
+        SELECT json_group_array(
+            json_object(
+                'id', w.id,
+                'company', w.company,
+                'role', w.role,
+                'location', w.location,
+                'start_date', w.start_date,
+                'end_date', w.end_date,
+				'projects', w.projects,
+                'responsibilities', w.responsibilities,
+                'is_translated', w.is_translated
+            )
+        )
+        FROM work_experiences w
+        WHERE w.resume_id = resumes.id
+    ), '[]') AS work_experiences
+FROM resumes
+LEFT JOIN users ON resumes.user_id = users.id
+WHERE resumes.id = ?
+GROUP BY resumes.id;
+  `
 
 	err := s.conn.QueryRow(query, ID).
-		Scan(&title, &skills, &is_published, &name, &email, &phone, &location, &professional_summary, &links, &education)
+		Scan(&title, &skills, &is_published, &name, &email, &phone, &location, &professional_summary, &links, &education, &workExperience)
 
 	if err == sql.ErrNoRows {
 		return git.Resume{}, errors.New("record with ID not found")
@@ -397,10 +427,14 @@ func (s *sqliteDB) GetResume(ID int64) (git.Resume, error) {
 	}
 
 	var edu []git.Education
-	_ = util.ConvertNullToSlice([]byte(skills.String), &edu)
+	if education.Valid {
+		err = json.Unmarshal([]byte(education.String), &edu)
+	}
 
-	// var wk []git.WorkExperience
-	// _ = util.ConvertNullToSlice([]byte(wo.String), &edu)
+	var wk []git.WorkExperience
+	if workExperience.Valid {
+		_ = json.Unmarshal([]byte(workExperience.String), &wk)
+	}
 
 	return git.Resume{
 		ID:              ID,
@@ -408,7 +442,7 @@ func (s *sqliteDB) GetResume(ID int64) (git.Resume, error) {
 		Skills:          sk,
 		IsPublished:     is_published,
 		Education:       edu,
-		WorkExperiences: []git.WorkExperience{},
+		WorkExperiences: wk,
 		Profile: git.Profile{
 			Name:                name,
 			Email:               email,
@@ -420,41 +454,89 @@ func (s *sqliteDB) GetResume(ID int64) (git.Resume, error) {
 	}, nil
 }
 
-func workExperience(c *sql.DB, rID int64, w []git.WorkExperience) error {
-	tx, err := c.Begin()
-	if len(w) == 0 {
-		return errors.New("no work experience found")
+func (c *sqliteDB) DeleteResume(rID int64) error {
+	_, err := c.conn.Exec("DELETE FROM resumes WHERE id=?", rID)
+	if err != nil {
+		return err
 	}
+	return nil
+}
 
-	wk := w[0]
-	query :=
-		"INSERT INTO work_experiences (resume_id, company, role, location, start_date, end_date, responsibilities, is_translated) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-	rw, err := tx.Exec(query, rID, wk.Company, wk.Role, wk.Location, wk.StartDate, wk.EndDate, wk.Responsibilities, wk.IsTranslated)
+func (c *sqliteDB) DeleteWorkExperience(wID int64) error {
+	_, err := c.conn.Exec("DELETE FROM work_experiences WHERE id=?", wID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *sqliteDB) DeleteEducation(eID int64) error {
+	_, err := c.conn.Exec("DELETE FROM educations WHERE id=?", eID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *sqliteDB) CreateOrUpdateWorkExperiences(rID int64, w []git.WorkExperience) ([]int64, error) {
+	tx, err := c.conn.Begin()
+	if len(w) == 0 {
+		return nil, errors.New("no work experience found")
+	}
 
 	if err != nil {
-		tx.Rollback()
-		return err
+		return nil, err
 	}
 
-	lstID, _ := rw.LastInsertId()
+	var lastID int64
+	ids := make([]int64, 0, len(w))
+	var errs []error
 
-	placeholders := make([]string, 0, len(wk.ProjectIDs))
-	value := make([]any, 0, len(wk.ProjectIDs)*2)
-	for _, v := range wk.ProjectIDs {
-		placeholders = append(placeholders, "(?, ?)")
-		value = append(value, lstID, v)
+	for _, wk := range w {
+		var exists bool
+		q := `SELECT EXISTS(SELECT 1 FROM work_experiences WHERE id=? AND resume_id=?)`
+		err = tx.QueryRow(q, wk.ID, rID).Scan(&exists)
+
+		if err != nil {
+			errs = append(errs, fmt.Errorf("check exists id=%d: %w", wk.ID, err))
+			continue
+		}
+		prjsJson, _ := json.Marshal(wk.Projects)
+		prjs := string(prjsJson)
+		if exists {
+			updateQuery := `UPDATE work_experiences SET company=?, role=?, location=?, start_date=?, end_date=?, responsibilities=?, is_translated =?, projects=? WHERE id=? AND resume_id=?`
+			wrw, err := tx.Exec(updateQuery, wk.Company, wk.Role, wk.Location, wk.StartDate, wk.EndDate, wk.Responsibilities, prjs, wk.IsTranslated, prjs, wk.ID, rID)
+
+			lID, _ := wrw.LastInsertId()
+			lastID = lID
+
+			if err != nil {
+				tx.Rollback()
+				errs = append(errs, fmt.Errorf("error saving id=%d: %w", wk.ID, err))
+				continue
+			}
+		} else {
+			query :=
+				"INSERT INTO work_experiences (resume_id, company, role, location, start_date, end_date, responsibilities, is_translated, projects) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+			rw, err := tx.Exec(query, rID, wk.Company, wk.Role, wk.Location, wk.StartDate, wk.EndDate, wk.Responsibilities, wk.IsTranslated, prjs)
+
+			if err != nil {
+				tx.Rollback()
+				errs = append(errs, fmt.Errorf("error inserting id=%d: %w", wk.ID, err))
+				continue
+			}
+
+			lstID, _ := rw.LastInsertId()
+			lastID = lstID
+		}
+		ids = append(ids, lastID)
 	}
-
-	q := fmt.Sprintf("INSERT INTO work_experience_projects (work_experience_id, project_id) VALUES %s",
-		strings.Join(placeholders, ","))
-
-	_, err = tx.Exec(q, value...)
 
 	if err := tx.Commit(); err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return ids, nil
 }
 
 func (s *sqliteDB) GetResumes() ([]git.Resume, error) {
@@ -533,25 +615,20 @@ func (s *sqliteDB) GetUserByID(id int32) (git.Profile, error) {
 	}, nil
 }
 
-func (s *sqliteDB) UpdateResume(uID int64, req git.Resume) error {
+func (s *sqliteDB) UpdateResume(rID int64, req git.Resume) (int64, error) {
 	if !reflect.DeepEqual(req.Profile, git.Profile{}) {
 		if err := s.UpdateUser(uID, req.Profile); err != nil {
-			return err
+			return 0, err
 		}
 	}
-
-	if !reflect.DeepEqual(req.WorkExperiences, git.WorkExperience{}) {
-		if err := workExperience(s.conn, uID, req.WorkExperiences); err != nil {
-			return err
-		}
+	if err := updateResumeObj(s, rID, req); err != nil {
+		return 0, err
 	}
 
-	// if !reflect.DeepEqual(req.Education, git.Education{}) {
-	// 	if edu, err := s.CreateEducation(req.Education); err != nil {
-	// 		return err
-	// 	}
-	// }
+	return 0, nil
+}
 
+func updateResumeObj(s *sqliteDB, rID int64, req git.Resume) error {
 	keys := []string{}
 	values := []any{}
 
@@ -560,8 +637,14 @@ func (s *sqliteDB) UpdateResume(uID int64, req git.Resume) error {
 		values = append(values, req.Title)
 	}
 
+	if req.Skills != nil {
+		keys = append(keys, "skills = ?")
+		j, _ := json.Marshal(req.Skills)
+		values = append(values, string(j))
+	}
+
 	query := fmt.Sprintf("UPDATE resumes SET %v WHERE id = ?", strings.Join(keys, ", "))
-	values = append(values, req.ID)
+	values = append(values, rID)
 
 	stmt, err := s.conn.Prepare(query)
 	if err != nil {
@@ -573,7 +656,6 @@ func (s *sqliteDB) UpdateResume(uID int64, req git.Resume) error {
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -619,24 +701,59 @@ func (s *sqliteDB) UpdateUser(uID int64, req git.Profile) error {
 	return nil
 }
 
-func (s *sqliteDB) CreateEducation(data git.Education) (git.Education, error) {
-	query := `
-	   INSERT INTO educations (resume_id, school, degree, field_of_study, start_date, end_date)
-	    VALUES (?, ?, ?, ?, ?, ?) `
-	row, err := s.conn.Exec(query, data.ResumeID, data.School, data.Degree, data.FieldOfStudy, data.StartDate, data.EndDate)
+func (s *sqliteDB) CreateOrUpdateEducation(rID int64, edus []git.Education) ([]int64, error) {
+	tx, err := s.conn.Begin()
+	if len(edus) == 0 {
+		return nil, errors.New("invalid education")
+	}
 	if err != nil {
-		return git.Education{}, err
+		return nil, err
 	}
-	id, err := row.LastInsertId()
+	var errs []error
+	ids := make([]int64, 0, len(edus))
 
-	if err != nil {
-		return git.Education{}, err
+	for _, edu := range edus {
+		var (
+			exists bool
+			lastID int64
+		)
+		q := `SELECT EXISTS(SELECT 1 FROM educations WHERE id=?)`
+		err = tx.QueryRow(q, edu.ID).Scan(&exists)
+
+		if err != nil {
+			errs = append(errs, fmt.Errorf("check exists id=%d: %w", edu.ID, err))
+			continue
+		}
+
+		if exists {
+			query := `UPDATE educations SET school=?, degree=?, field_of_study=?, end_date=? WHERE id=? AND resume_id=?`
+			row, err := tx.Exec(query, edu.School, edu.Degree, edu.FieldOfStudy, edu.EndDate, edu.ID, rID)
+			if err != nil {
+				tx.Rollback()
+				errs = append(errs, fmt.Errorf("unable to create education id=%d: %w", edu.ID, err))
+				continue
+			}
+			id, _ := row.LastInsertId()
+			lastID = id
+		} else {
+			query := "INSERT INTO educations (resume_id, school, degree, field_of_study, end_date) VALUES (?, ?, ?, ?, ?)"
+
+			row, err := tx.Exec(query, rID, edu.School, edu.Degree, edu.FieldOfStudy, edu.EndDate)
+			if err != nil {
+				tx.Rollback()
+				errs = append(errs, fmt.Errorf("unable to create education resume id=%d: %w", rID, err))
+				continue
+			}
+			id, _ := row.LastInsertId()
+			lastID = id
+		}
+		ids = append(ids, lastID)
 	}
 
-	res := git.Education{
-		ID: id,
+	if err := tx.Commit(); err != nil {
+		return nil, err
 	}
-	return res, nil
+	return ids, nil
 }
 
 func (s *sqliteDB) Delete(key string) error {

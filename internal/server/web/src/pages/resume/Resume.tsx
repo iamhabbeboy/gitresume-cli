@@ -1,45 +1,44 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import Table from "../../components/resume/Table";
-import type {
-  Resume as ResumeType,
-  TableProps,
-} from "../../components/resume/type";
+import type { TableProps } from "../../components/resume/type";
 import { useResumeStore } from "../../store/resumeStore";
 
 const Resume: React.FC = () => {
-  const { fetchResumes } = useResumeStore();
-  const [resumes, setResumes] = useState<ResumeType[]>([]);
+  const { resumes, fetchResumes } = useResumeStore();
+  // const [resumes, setResumes] = useState<ResumeType[]>([]);
   useEffect(() => {
     (async () => {
-      const resp = await fetchResumes();
-      setResumes(resp ?? []);
+      await fetchResumes();
+      // setResumes(resp ?? []);
     })();
   }, []);
+
+  const reverse = resumes.reverse();
 
   const table: TableProps = {
     data: [
       {
         name: "Title",
-        values: resumes.map((res) => ({
+        values: reverse.map((res) => ({
           value: res.title ?? "",
           data: res.id,
         })),
       },
       {
         name: "Stack",
-        values: resumes.map((res) => ({
-          value: res.skills.join(", "),
+        values: reverse.map((res) => ({
+          value: res.skills ? res.skills.join(", ") : "",
         })),
       },
       {
         name: "Version",
-        values: resumes.map((res) => ({
+        values: reverse.map((res) => ({
           value: "version " + String(res.version),
         })),
       },
       {
         name: "Published",
-        values: resumes.map((res) => ({
+        values: reverse.map((res) => ({
           value: res.is_published ? "Published 🚀" : "Draft",
         })),
       },
@@ -47,7 +46,11 @@ const Resume: React.FC = () => {
   };
   return (
     <div className="relative overflow-x-auto sm:rounded-lg">
-      <Table data={table.data} />
+      {reverse.length > 0 ? <Table data={table.data} /> : (
+        <>
+          <h1 className="text-2xl text-gray-400">No resume available</h1>
+        </>
+      )}
     </div>
   );
 };
