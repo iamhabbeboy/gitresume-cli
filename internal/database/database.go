@@ -66,4 +66,5 @@ func GetInstance() IDatabase {
 		instance = db
 	})
 	return instance
+	// return nil
 }

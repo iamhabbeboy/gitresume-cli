@@ -12,21 +12,13 @@ const ProjectList: React.FC<
   }
 > = ({ projects, selectedProject, setSelectedProject }) => {
   const store = useStore();
-  // const [editProjectName, setEditProjectName] = useState<string>("");
-  // const handleAction = (
-  //   e: React.FormEvent<HTMLFormElement> | React.MouseEvent<HTMLButtonElement>,
-  //   action: "delete" | "edit",
-  //   id: string,
-  // ) => {
-  //   e.preventDefault();
-  //   if (action === "edit") {
-  //     setEditProjectName(id);
-  //     return;
-  //   }
-  // };
 
   const handleChangeProject = (proj: Project) => {
-    setSelectedProject({ id: Number(proj.id), name: proj.name });
+    setSelectedProject({
+      id: Number(proj.id),
+      name: proj.name,
+      technologies: proj.technologies,
+    });
     store.fetchCommitSummary(Number(proj.id));
   };
 

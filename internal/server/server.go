@@ -12,6 +12,8 @@ import (
 
 	"net"
 	"net/http"
+
+	"github.com/iamhabbeboy/gitresume/internal/database"
 )
 
 var startPort = 4000
@@ -20,7 +22,7 @@ var err error
 
 type Middleware func(http.Handler) http.Handler
 
-func Serve() {
+func Serve(db database.IDatabase) {
 	mux := http.NewServeMux()
 
 	InitReactHandler()
@@ -35,51 +37,49 @@ func Serve() {
 	// API endpoints
 	mux.HandleFunc("/api/ai", AiHandler)
 	mux.HandleFunc("/api/users", UserHandler)
-	mux.HandleFunc("/api/users/{id}", GetUserHandler)
-	mux.HandleFunc("/api/projects", ProjectsHandler)
-	mux.HandleFunc("/api/projects/{id}", ProjectHandler)
+	mux.HandleFunc("/api/users/{id}", GetUserHandler(db))
+	mux.HandleFunc("/api/projects", ProjectsHandler(db))
+	mux.HandleFunc("/api/projects/{id}", ProjectHandler(db))
 	mux.HandleFunc("/api/resumes", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost:
-			CreateResumeHandler(w, r)
+			CreateResumeHandler(db)(w, r)
 		case http.MethodGet:
-			GetAllResumesHandler(w, r)
+			GetAllResumesHandler(db)(w, r)
 		default:
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
 	})
-	//
+
 	mux.HandleFunc("/api/resumes/{id}", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPut:
-			UpdateResumeHandler(w, r)
+			UpdateResumeHandler(db)(w, r)
 		case http.MethodGet:
-			GetResumeHandler(w, r)
+			GetResumeHandler(db)(w, r)
 		case http.MethodDelete:
-			DeleteResumesHandler(w, r)
+			DeleteResumesHandler(db)(w, r)
 		default:
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
 	})
-	mux.HandleFunc("/api/commits/bulk-update", BulkUpdateCommitMessageHandler)
+	mux.HandleFunc("/api/commits/bulk-update", BulkUpdateCommitMessageHandler(db))
 	mux.HandleFunc("/api/work-experiences/{id}", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPut:
-			CreateOrUpdateWorkExperiencesHandler(w, r)
+			CreateOrUpdateWorkExperiencesHandler(db)
 		case http.MethodDelete:
-			DeleteWorkExperienceHandler(w, r)
+			DeleteWorkExperienceHandler(db)
 		default:
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
 	})
 	mux.HandleFunc("/api/educations/{id}", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
-		case http.MethodGet:
-			GetEducationHandler(w, r)
 		case http.MethodPut:
-			CreateOrUpdateEducationHandler(w, r)
+			CreateOrUpdateEducationHandler(db)(w, r)
 		case http.MethodDelete:
-			DeleteEducationHandler(w, r)
+			DeleteEducationHandler(db)(w, r)
 		default:
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
@@ -119,17 +119,17 @@ func Serve() {
 	// }
 }
 
-func handlePort() {
-	// Try ports starting from 4000 up to 4100
-	for port := startPort; port <= 4100; port++ {
-		address := fmt.Sprintf(":%d", port)
-		listener, err = net.Listen("tcp", address)
-		if err == nil {
-			fmt.Printf("Server is running on http://localhost:%d\n", port)
-			break
-		}
-	}
-}
+// func handlePort() {
+// 	// Try ports starting from 4000 up to 4100
+// 	for port := startPort; port <= 4100; port++ {
+// 		address := fmt.Sprintf(":%d", port)
+// 		listener, err = net.Listen("tcp", address)
+// 		if err == nil {
+// 			fmt.Printf("Server is running on http://localhost:%d\n", port)
+// 			break
+// 		}
+// 	}
+// }
 
 func GetID(w http.ResponseWriter, path string) string {
 	pathParts := strings.Split(path, "/")
@@ -140,4 +140,13 @@ func GetID(w http.ResponseWriter, path string) string {
 
 	idStr := pathParts[3]
 	return idStr
+}
+
+func GetCenterID(w http.ResponseWriter, path string) string {
+	parts := strings.Split(path, "/")
+	if len(parts) >= 4 {
+		id := parts[3]
+		return id
+	}
+	return ""
 }

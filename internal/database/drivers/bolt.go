@@ -217,10 +217,3 @@ func (d *Db) GetAll() (error, []KV) {
 	}
 	return nil, result
 }
-
-// func GetInstance() *Db {
-// 	once.Do(func() {
-// 		instance = New(util.PROJECT_BUCKET)
-// 	})
-// 	return instance
-// }

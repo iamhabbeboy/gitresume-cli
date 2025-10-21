@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -16,59 +17,86 @@ import (
 	"github.com/iamhabbeboy/gitresume/util"
 )
 
-var db = database.GetInstance()
+func SetupHook(db database.IDatabase) error {
+	homeDir, _ := os.UserHomeDir()
+	folderPath := filepath.Join(homeDir, "."+util.APP_NAME+"/config.yaml")
+	_, err := os.Stat(folderPath)
+	if !os.IsNotExist(err) {
+		return errors.New("config already initialized. use the 'gitresume seed' command to sync your project")
+	}
 
-func SetupHook() error {
 	if err := db.Migrate(); err != nil {
 		return err
 	}
 
-	path, err := os.Getwd()
+	output, err := git.RunGitCommand("", "config", "--global", "--list")
 	if err != nil {
 		return err
 	}
-	gitutil := git.NewGitUtil(path)
-	user, err := gitutil.GetUserInfo()
-
-	if err != nil {
-		return err
+	cfgList := strings.Split(output, "\n")
+	userCfg := map[string]string{
+		"email": "",
+		"name":  "",
+	}
+	for _, v := range cfgList {
+		if strings.Contains(v, "user.name") {
+			values := strings.Split(v, "=")
+			userCfg["name"] = values[1]
+		}
+		if strings.Contains(v, "user.email") {
+			values := strings.Split(v, "=")
+			userCfg["email"] = values[1]
+		}
 	}
 
-	u := struct {
-		Name  string `mapstructure:"name"`
-		Email string `mapstructure:"email"`
-	}{
-		Name:  strings.TrimSpace(user.Name),
-		Email: strings.TrimSpace(user.Email),
+	if userCfg["name"] == "" || userCfg["email"] == "" {
+		path, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+		gitutil := git.NewGitUtil(path)
+		user, err := gitutil.GetUserInfo()
+
+		if err != nil {
+			return err
+		}
+
+		userCfg["name"] = user.Name
+		userCfg["email"] = user.Email
 	}
 
-	err = config.AddProject(path, u)
-	if err != nil {
-		return err
-	}
-
-	p, err := db.GetUser(user.Email)
-	if err != nil {
-		return err
-	}
-
-	if p.ID > 0 {
-		return errors.New("gitresume config already exists")
-	}
-	_, err = db.CreateUser(git.Profile{
-		Name:         user.Name,
-		Email:        user.Email,
-		PasswordHash: "admin",
+	err = config.SaveConfig(&config.AppConfig{
+		User: config.User{
+			Name:  userCfg["name"],
+			Email: userCfg["email"],
+		},
 	})
-
+	// err = config.AddProject(path, u)
 	if err != nil {
 		return err
+	}
+
+	prf, err := db.GetUser(userCfg["email"])
+	if err != nil {
+		return err
+	}
+
+	if prf.ID == 0 {
+		_, err = db.CreateUser(git.Profile{
+			Name:         userCfg["name"],
+			Email:        userCfg["email"],
+			PasswordHash: "admin",
+		})
+
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
-func SeedHook() error {
+func SeedHook(db database.IDatabase) error {
 	project, _ := os.Getwd()
 
 	conf, _ := config.GetProject(project)
@@ -80,11 +108,18 @@ func SeedHook() error {
 		return err
 	}
 
-	prj := git.Project{
-		Name:    filepath.Base(project),
-		Path:    project,
-		Commits: logs,
+	tech, err := gitutil.GetStacks(usrEmail)
+	if err != nil {
+		return err
 	}
+	techJSON, _ := json.Marshal(tech)
+	prj := git.Project{
+		Name:         filepath.Base(project),
+		Path:         project,
+		Commits:      logs,
+		Technologies: string(techJSON),
+	}
+
 	p, err := db.GetProjectByName(prj.Name)
 	if err != nil {
 		return err
@@ -100,8 +135,8 @@ func SeedHook() error {
 	return nil
 }
 
-func DashboardHook() error {
-	server.Serve()
+func DashboardHook(db database.IDatabase) error {
+	server.Serve(db)
 	return nil
 }
 

@@ -13,7 +13,7 @@ const Resume: React.FC = () => {
     })();
   }, []);
 
-  const reverse = resumes.reverse();
+  const reverse = resumes || [].reverse();
 
   const table: TableProps = {
     data: [

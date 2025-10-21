@@ -1,7 +1,7 @@
 package export
 
 type IExporter interface {
-	Export(content string) ([]byte, error)
+	Export(content []byte) ([]byte, error)
 	Close() error
 }
 
@@ -10,10 +10,8 @@ type ExportType string
 const (
 	Markdown ExportType = "markdown"
 	PDF      ExportType = "pdf"
-	Doc      ExportType = "doc"
+	Docx     ExportType = "docx"
 )
-
-// var folder = "./resume_exports"
 
 func NewExport(exportType ExportType) (IExporter, error) {
 	switch exportType {
@@ -21,7 +19,7 @@ func NewExport(exportType ExportType) (IExporter, error) {
 		return NewMarkdown()
 	case PDF:
 		return NewPDF()
-	case Doc:
+	case Docx:
 		return NewDoc()
 	default:
 		return nil, nil

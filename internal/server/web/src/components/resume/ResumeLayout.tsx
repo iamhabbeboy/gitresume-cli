@@ -3,6 +3,7 @@ import Layout from "../Layout";
 import { useLocation } from "react-router";
 import { useResumeStore } from "../../store/resumeStore";
 import { useEffect } from "react";
+import { t } from "../../util/config";
 
 const ResumeLayout = () => {
   const location = useLocation();
@@ -10,42 +11,52 @@ const ResumeLayout = () => {
   const { id } = useParams();
 
   const store = useResumeStore();
-  const isCreate = location.pathname === "/resumes/create";
+  const isListing = location.pathname === "/resumes";
   const handleCreateResume = async () => {
     store.resetResume();
     const resp = await store.createResume();
     if (resp.id) {
       return router(`/resumes/${resp.id}`);
     }
-    return alert("An error occured while creating a new resume");
+    return t("An error occured while creating a new resume", "error");
   };
 
   useEffect(() => {
     if (id) {
-      store.fetchResumeById(Number(id));
+      (async () => {
+        const resp = await store.fetchResumeById(Number(id));
+        if (resp.error) {
+          return router(`/resumes`);
+        }
+      })();
     }
-  }, [id]);
+    // eslint-disable-next-line
+  }, [id, router]);
 
   return (
     <Layout>
       <div className="w-full">
         <div className="flex justify-between mb-5">
           <div>
-            {isCreate && (
+            {
+              /* {isListing && (
               <Link className="text-gray-500 underline" to="/resumes">
                 Back{" "}
               </Link>
-            )}
+            )} */
+            }
             <h3 className="text-lg border-gray-300 font-bold">Resume</h3>
           </div>
           <div>
-            <Link
-              to={`${isCreate ? "#" : "#"}`}
-              className="flex justify-between bg-cyan-600 text-white px-10 py-2 rounded-lg text-xs hover:bg-cyan-700"
-              onClick={handleCreateResume}
-            >
-              {isCreate ? "Publish" : "Create resume"}
-            </Link>
+            {isListing && (
+              <Link
+                to="#"
+                className="flex justify-between bg-cyan-600 text-white px-10 py-2 rounded-lg text-xs hover:bg-cyan-700"
+                onClick={handleCreateResume}
+              >
+                Create resume
+              </Link>
+            )}
           </div>
         </div>
         <div className="relative overflow-x-auto sm:rounded-lg">

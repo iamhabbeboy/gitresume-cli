@@ -38,12 +38,13 @@ const WorkExperience: React.FC<Props> = ({ work, index, setModalStatus }) => {
           {" "}
         </p>
         <p className="italic">
-          {work.dateFrom} - {work.dateTo}
+          {work.start_date} - {work.end_date}
         </p>
       </div>
       <div className="mt-3">
         <ul className=" list-disc  list-inside">
-          {work.responsibilities.map((responsibility) => (
+          {
+            /* {work..map((responsibility) => (
             <li className="py-1">
               <span>{responsibility.message}</span>
               <button className="ml-2">
@@ -61,7 +62,8 @@ const WorkExperience: React.FC<Props> = ({ work, index, setModalStatus }) => {
                 </svg>
               </button>
             </li>
-          ))}
+          ))} */
+          }
         </ul>
       </div>
     </div>

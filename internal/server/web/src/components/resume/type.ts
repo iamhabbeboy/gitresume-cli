@@ -1,5 +1,3 @@
-import type { CommitMessage } from "../../types/project";
-
 export interface Dataprop {
   name: string;
   slug?: string;
@@ -45,7 +43,7 @@ export interface Links {
 export interface Profile {
   name: string;
   email: string;
-  links: Links[];
+  links: string[];
   phone: string;
   professional_summary: string;
   location: string;
@@ -67,4 +65,9 @@ export interface WorkExperience {
 export interface OptionType {
   label: string;
   value: number;
+}
+
+export interface ReOrder {
+  label: string;
+  component: React.ReactNode;
 }

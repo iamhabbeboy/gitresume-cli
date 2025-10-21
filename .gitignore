@@ -4,4 +4,4 @@ internal/.DS_Store
 contribution.log
 **/**/.env
 gitresume.db
-
+.vscode/

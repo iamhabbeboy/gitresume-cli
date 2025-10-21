@@ -2,6 +2,7 @@ package drivers
 
 import (
 	"database/sql"
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -17,6 +18,9 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 )
+
+//go:embed sql/schema.sql
+var schema string
 
 const DEV_COMMIT_SQLITE_DB_FILE = "gitresume_sqlite.db"
 
@@ -90,7 +94,7 @@ func (s *sqliteDB) Store(data git.Project) error {
 		return err
 	}
 	// store projects
-	row, err := tx.Exec("INSERT INTO projects (user_id, name, path) VALUES (?, ?, ?)", 1, data.Name, data.Path)
+	row, err := tx.Exec("INSERT INTO projects (user_id, name, path, technologies) VALUES (?, ?, ?, ?)", 1, data.Name, data.Path, data.Technologies)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -262,6 +266,7 @@ func (s *sqliteDB) GetAllProject(limit, offset int) ([]git.Project, error) {
 	SELECT 
 		p.id AS project_id,
 		p.name AS project_name,
+		p.technologies AS technologies,
 		c.id AS commit_id,
 		c.message,
 		c.created_at,
@@ -282,21 +287,23 @@ func (s *sqliteDB) GetAllProject(limit, offset int) ([]git.Project, error) {
 		var (
 			projectID        int
 			projectName      string
+			technologies     sql.NullString
 			commitID         sql.NullInt64
 			commitMsg        sql.NullString
 			commitDate       sql.NullString
 			commitUpdateDate sql.NullString
 		)
-		err := rows.Scan(&projectID, &projectName, &commitID, &commitMsg, &commitDate, &commitUpdateDate)
+		err := rows.Scan(&projectID, &projectName, &technologies, &commitID, &commitMsg, &commitDate, &commitUpdateDate)
 		if err != nil {
 			return nil, err
 		}
 
 		if _, exists := projectsMap[projectID]; !exists {
 			projectsMap[projectID] = &git.Project{
-				ID:      projectID,
-				Name:    projectName,
-				Commits: []git.GitCommit{},
+				ID:           projectID,
+				Name:         projectName,
+				Technologies: technologies.String,
+				Commits:      []git.GitCommit{},
 			}
 		}
 		if commitID.Valid {
@@ -344,8 +351,8 @@ func (s *sqliteDB) GetResume(ID int64) (git.Resume, error) {
 		title                string
 		skills               sql.NullString
 		is_published         bool
-		name                 string
-		email                string
+		name                 sql.NullString
+		email                sql.NullString
 		phone                sql.NullString
 		location             sql.NullString
 		links                sql.NullString
@@ -421,10 +428,11 @@ GROUP BY resumes.id;
 	var sk []string
 	_ = util.ConvertNullToSlice([]byte(skills.String), &sk)
 
-	var lk []git.Link
-	if skills.Valid {
-		_ = json.Unmarshal([]byte(links.String), &lk)
+	var lks []string
+	if links.Valid {
+		err = json.Unmarshal([]byte(links.String), &lks)
 	}
+	// _ = util.ConvertNullToSlice([]byte(links.String), &lks)
 
 	var edu []git.Education
 	if education.Valid {
@@ -444,11 +452,11 @@ GROUP BY resumes.id;
 		Education:       edu,
 		WorkExperiences: wk,
 		Profile: git.Profile{
-			Name:                name,
-			Email:               email,
-			Location:            location.String,
-			Phone:               phone.String,
-			Links:               lk,
+			Name:                name.String,
+			Email:               strings.TrimSpace(email.String),
+			Location:            strings.TrimSpace(location.String),
+			Phone:               strings.TrimSpace(phone.String),
+			Links:               lks,
 			ProfessionalSummary: professional_summary.String,
 		},
 	}, nil
@@ -501,24 +509,30 @@ func (c *sqliteDB) CreateOrUpdateWorkExperiences(rID int64, w []git.WorkExperien
 			errs = append(errs, fmt.Errorf("check exists id=%d: %w", wk.ID, err))
 			continue
 		}
-		prjsJson, _ := json.Marshal(wk.Projects)
-		prjs := string(prjsJson)
-		if exists {
-			updateQuery := `UPDATE work_experiences SET company=?, role=?, location=?, start_date=?, end_date=?, responsibilities=?, is_translated =?, projects=? WHERE id=? AND resume_id=?`
-			wrw, err := tx.Exec(updateQuery, wk.Company, wk.Role, wk.Location, wk.StartDate, wk.EndDate, wk.Responsibilities, prjs, wk.IsTranslated, prjs, wk.ID, rID)
 
-			lID, _ := wrw.LastInsertId()
-			lastID = lID
+		if exists {
+			updateQuery := "UPDATE work_experiences SET company=?, role=?, location=?, start_date=?, end_date=?, responsibilities=?, projects=?, is_translated =? WHERE id=? AND resume_id=?"
+			wrw, err := tx.Exec(updateQuery, wk.Company, wk.Role, wk.Location, wk.StartDate, wk.EndDate, wk.Responsibilities, wk.Projects, wk.IsTranslated, wk.ID, rID)
 
 			if err != nil {
 				tx.Rollback()
 				errs = append(errs, fmt.Errorf("error saving id=%d: %w", wk.ID, err))
 				continue
 			}
+
+			lID, err := wrw.LastInsertId()
+			lastID = lID
+
+			if err != nil {
+				tx.Rollback()
+				errs = append(errs, fmt.Errorf("error getting the lastID id=%d: %w", wk.ID, err))
+				continue
+			}
+
 		} else {
 			query :=
 				"INSERT INTO work_experiences (resume_id, company, role, location, start_date, end_date, responsibilities, is_translated, projects) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
-			rw, err := tx.Exec(query, rID, wk.Company, wk.Role, wk.Location, wk.StartDate, wk.EndDate, wk.Responsibilities, wk.IsTranslated, prjs)
+			rw, err := tx.Exec(query, rID, wk.Company, wk.Role, wk.Location, wk.StartDate, wk.EndDate, wk.Responsibilities, wk.IsTranslated, wk.Projects)
 
 			if err != nil {
 				tx.Rollback()
@@ -535,6 +549,8 @@ func (c *sqliteDB) CreateOrUpdateWorkExperiences(rID int64, w []git.WorkExperien
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
+
+	fmt.Println(errs)
 
 	return ids, nil
 }
@@ -599,7 +615,7 @@ func (s *sqliteDB) GetUserByID(id int32) (git.Profile, error) {
 		return git.Profile{}, err
 	}
 
-	var slinks []git.Link
+	var slinks []string
 	if links.Valid {
 		_ = json.Unmarshal([]byte(links.String), &slinks)
 	}
@@ -683,6 +699,12 @@ func (s *sqliteDB) UpdateUser(uID int64, req git.Profile) error {
 		val = append(val, req.ProfessionalSummary)
 	}
 
+	if req.Links != nil {
+		key = append(key, "links = ?")
+		j, _ := json.Marshal(req.Links)
+		val = append(val, string(j))
+	}
+
 	query := fmt.Sprintf("UPDATE users SET %v WHERE id = ?", strings.Join(key, ", "))
 
 	val = append(val, uID)
@@ -761,11 +783,7 @@ func (s *sqliteDB) Delete(key string) error {
 }
 
 func (s *sqliteDB) Migrate() error {
-	schema, err := os.ReadFile("./sql/schema.sql")
-	if err != nil {
-		return err
-	}
-	_, err = s.conn.Exec(string(schema))
+	_, err := s.conn.Exec(schema)
 	if err != nil && !strings.Contains(err.Error(), "already exists") {
 		return err
 	}

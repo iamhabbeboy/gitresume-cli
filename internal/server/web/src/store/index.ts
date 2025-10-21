@@ -19,7 +19,10 @@ type Action = {
   updateCommits: (projectName: string, commits: CommitMessage[]) => void;
   bulkUpdateCommit: (projectID: number, payload: CustomCommitMessage[]) => void;
   updateCommitsWithAI: (projectID: number, commits: CommitMessage[]) => void;
-  updateAllCommitsWithAI: (projectID: number, commits: string[]) => void;
+  updateAllCommitsWithAI: (
+    projtID: number,
+    commits: string[],
+  ) => Promise<{ success: boolean; data: CommitMessage[]; error?: string }>;
   fetchCommitSummary: (projectId: number) => Promise<CommitMessage[]>;
 };
 
@@ -55,6 +58,7 @@ export const useStore = create<ProjectStore & Action>()((set, get) => ({
   },
   updateAllCommitsWithAI: async (projectID: number, commits: string[]) => {
     try {
+      set((state) => ({ ...state, loading: true }));
       const { data } = await axios.post(`${baseUri}/api/ai`, {
         commits,
       });
@@ -66,8 +70,13 @@ export const useStore = create<ProjectStore & Action>()((set, get) => ({
       }));
 
       get().bulkUpdateCommit(projectID, payload);
+      return { success: true, data: payload };
     } catch (e) {
-      console.log(e);
+      const message = e instanceof Error ? e.message : "Unknown error occurred";
+      set((state) => ({ ...state, error: message as string }));
+      return { success: false, error: message, data: [] };
+    } finally {
+      set((state) => ({ ...state, loading: false, error: "" }));
     }
   },
   updateCommitsWithAI: async (projectID: number, commits: CommitMessage[]) => {

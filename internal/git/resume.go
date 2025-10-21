@@ -16,15 +16,15 @@ type Resume struct {
 }
 
 type Profile struct {
-	ID                  int32  `json:"id"`
-	Name                string `json:"name"`
-	Email               string `json:"email"`
-	PasswordHash        string `json:"password_hash"`
-	Location            string `json:"location"`
-	Phone               string `json:"phone"`
-	ProfessionalSummary string `json:"professional_summary"`
-	Website             string `json:"website"`
-	Links               []Link `json:"links"`
+	ID                  int32    `json:"id"`
+	Name                string   `json:"name"`
+	Email               string   `json:"email"`
+	PasswordHash        string   `json:"password_hash"`
+	Location            string   `json:"location"`
+	Phone               string   `json:"phone"`
+	ProfessionalSummary string   `json:"professional_summary"`
+	Website             string   `json:"website"`
+	Links               []string `json:"links"`
 }
 
 type Link struct {

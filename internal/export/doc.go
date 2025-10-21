@@ -2,8 +2,7 @@ package export
 
 import (
 	"bytes"
-	"fmt"
-	"os"
+	"errors"
 	"os/exec"
 )
 
@@ -18,31 +17,28 @@ func (*IDocExporter) Close() error {
 	return nil
 }
 
-func (*IDocExporter) Export(c string) ([]byte, error) {
-	doc, err := HTMLToDocx(c)
-	if err != nil {
-		return nil, err
-	}
-
-	return doc, nil
-}
-
-func HTMLToDocx(html string) ([]byte, error) {
+func (*IDocExporter) Export(htmlBytes []byte) ([]byte, error) {
+	// htmlBytes := []byte(c)
 	cmd := exec.Command("pandoc", "-f", "html", "-t", "docx", "-o", "-")
-
-	cmd.Stdin = bytes.NewBufferString(html)
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	cmd.Stderr = os.Stderr
-
-	err := cmd.Run()
+	stdin, err := cmd.StdinPipe()
 	if err != nil {
-		return nil, fmt.Errorf("pandoc failed: %w", err)
-	}
-
-	if err := os.WriteFile("output.docx", out.Bytes(), 0644); err != nil {
-		fmt.Println("Error writing file:", err)
 		return nil, err
 	}
-	return out.Bytes(), nil
+	stdout := &bytes.Buffer{}
+	cmd.Stdout = stdout
+	cmd.Stderr = &bytes.Buffer{}
+
+	if err := cmd.Start(); err != nil {
+		return nil, err
+	}
+
+	_, _ = stdin.Write(htmlBytes)
+	stdin.Close()
+
+	if err := cmd.Wait(); err != nil {
+		return nil, errors.New("pandoc error: " + cmd.Stderr.(*bytes.Buffer).String())
+	}
+
+	docxBytes := stdout.Bytes()
+	return docxBytes, nil
 }

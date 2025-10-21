@@ -12,6 +12,7 @@ interface TextEditorProps {
   id?: number;
 }
 const GREditor: React.FC<TextEditorProps> = ({
+  className,
   handleEdit,
   value,
   placeholder,
@@ -54,7 +55,9 @@ const GREditor: React.FC<TextEditorProps> = ({
     <div className="border border-gray-300 p-2 rounded-md">
       <EditorContent
         editor={editor}
-        className="[&_div.ProseMirror]:outline-none [&_div.ProseMirror]:focus:outline-none prose max-w-none focus:outline-none min-h-[150px] max-h-[300px] overflow-y-auto text-gray-700 list-disc list-inside [&_ul]:pl-0 [&_ol]:pl-0"
+        className={`[&_div.ProseMirror]:outline-none [&_div.ProseMirror]:focus:outline-none prose max-w-none focus:outline-none min-h-[150px] max-h-[300px] overflow-y-auto text-gray-700 list-disc list-inside [&_ul]:pl-0 [&_ol]:pl-0 ${
+          className || ""
+        }`}
       />
     </div>
   );

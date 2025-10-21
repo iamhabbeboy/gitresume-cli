@@ -97,7 +97,7 @@ func SaveConfig(cfg *AppConfig) error {
 
 	v := viper.New()
 	v.SetConfigType("yaml")
-	v.Set("projects", cfg.Projects)
+	// v.Set("projects", cfg.Projects)
 	v.Set("user.name", cfg.User.Name)
 	v.Set("user.email", cfg.User.Email)
 

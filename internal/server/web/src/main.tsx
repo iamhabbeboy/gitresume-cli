@@ -4,6 +4,9 @@ import "./index.css";
 import { createBrowserRouter, RouterProvider } from "react-router";
 import CreateResume from "./pages/resume/Create.tsx";
 import Resume from "./pages/resume/Resume.tsx";
+import Setting from "./pages/setting/Setting.tsx";
+import LLMConfig from "./pages/setting/LLMConfig.tsx";
+import CloudConfig from "./pages/setting/CloudConfig.tsx";
 
 const router = createBrowserRouter([
   {
@@ -49,11 +52,25 @@ const router = createBrowserRouter([
     },
   },
   {
-    path: "/setting",
+    path: "/settings",
     lazy: async () => {
-      const module = await import("./pages/setting/Setting.tsx");
+      const module = await import("./components/setting/SettingLayout.tsx");
       return { Component: module.default };
     },
+    children: [
+      {
+        index: true,
+        element: <Setting />,
+      },
+      {
+        path: "llm",
+        element: <LLMConfig />,
+      },
+      {
+        path: "cloud",
+        element: <CloudConfig />,
+      },
+    ],
   },
 ]);
 

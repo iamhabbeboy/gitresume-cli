@@ -6,6 +6,8 @@ import (
 	"os"
 
 	"github.com/iamhabbeboy/gitresume/cmd/commands"
+	"github.com/iamhabbeboy/gitresume/internal/database"
+	"github.com/iamhabbeboy/gitresume/internal/git"
 	"github.com/spf13/cobra"
 )
 
@@ -20,9 +22,17 @@ import (
 * gitresume dashboard
  */
 
+var db database.IDatabase
+
 var rootCmd = &cobra.Command{
 	Use:   "gitresume",
 	Short: "🚀 Gitresume helps you summarize git activity and prep for job interviews",
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		if db == nil {
+			db = database.GetInstance()
+		}
+		return nil
+	},
 }
 
 func init() {
@@ -45,11 +55,9 @@ var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Add project to your gitresume",
 	Run: func(cmd *cobra.Command, args []string) {
-		err := commands.SetupHook()
+		err := commands.SetupHook(db)
 		if err != nil {
-			fmt.Println("🚫 Failed to add project:", err)
-		} else {
-			fmt.Println("🎉 Project successfully added")
+			fmt.Println("🚫 Error:", err)
 		}
 	},
 }
@@ -58,7 +66,7 @@ var seedCmd = &cobra.Command{
 	Use:   "seed",
 	Short: "Seed your commit messages",
 	Run: func(cmd *cobra.Command, args []string) {
-		err := commands.SeedHook()
+		err := commands.SeedHook(db)
 		if err != nil {
 			fmt.Println("🚫 Failed to add project:", err)
 		} else {
@@ -73,7 +81,7 @@ var dashboardCmd = &cobra.Command{
 	Use:   "serve",
 	Short: "Web app dashboard for your dev report",
 	Run: func(cmd *cobra.Command, args []string) {
-		commands.DashboardHook()
+		commands.DashboardHook(db)
 		// if err != nil {
 		// 	fmt.Println("Failed to start dashboard server:", err)
 		// } else {
@@ -86,12 +94,20 @@ var aiTestCmd = &cobra.Command{
 	Use:   "ai",
 	Short: "Test AI integration",
 	Run: func(cmd *cobra.Command, args []string) {
-		err := commands.AiTestHook()
+		d, _ := os.Getwd()
+		g := git.NewGitUtil(d)
+		t, err := g.GetStacks("iamhabbeboy@gmail.com")
 		if err != nil {
-			fmt.Println("Failed to start dashboard server:", err)
-		} else {
-			fmt.Println("🚀 Done!")
+			fmt.Println(err)
+			return
 		}
+		fmt.Println(t)
+		// err := commands.AiTestHook()
+		// if err != nil {
+		// 	fmt.Println("Failed to start dashboard server:", err)
+		// } else {
+		// 	fmt.Println("🚀 Done!")
+		// }
 	},
 }
 

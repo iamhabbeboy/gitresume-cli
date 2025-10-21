@@ -7,7 +7,7 @@ const Education: React.FC<type> = ({ ...education }) => {
       <div className="">
         <p>{education.school}</p>
         <p className="italic">
-          {education.dateFrom} - {education.dateTo}
+          {education.end_date}
         </p>
       </div>
     </>
