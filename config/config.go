@@ -1,12 +1,11 @@
 package config
 
 import (
-	"fmt"
+	"errors"
 	"os"
-	"os/user"
 	"path/filepath"
+	"strings"
 	"sync"
-	"time"
 
 	"github.com/spf13/viper"
 )
@@ -17,25 +16,21 @@ var (
 )
 
 type User struct {
-	Name  string `mapstructure:"name"`
-	Email string `mapstructure:"email"`
-}
-
-type Project struct {
-	Name      string    `mapstructure:"name"`
-	Path      string    `mapstructure:"path"`
-	GitName   string    `mapstructure:"git_name"`
-	GitEmail  string    `mapstructure:"git_email"`
-	CreatedAt time.Time `mapstructure:"created_at"`
+	Name  string `yaml:"name"`
+	Email string `yaml:"email"`
 }
 
 type AppConfig struct {
-	AuthToken     string    `mapstructure:"auth_token"`
-	Environment   string    `mapstructure:"environment"`
-	User          User      `mapstructure:"user"`
-	summaryFormat string    `mapstructure:"summary_format"`
-	Features      []string  `mapstructure:"features"`
-	Projects      []Project `mapstructure:"projects"`
+	AuthToken string      `yaml:"auth_token"`
+	User      User        `yaml:"user"`
+	AiOptions []AiOptions `mapstructure:"ai_options" yaml:"ai_options" json:"ai_options"`
+}
+
+type AiOptions struct {
+	Name      string `mapstructure:"name" yaml:"name" json:"name"`
+	ApiKey    string `mapstructure:"api_key" yaml:"api_key" json:"api_key"`
+	Model     string `mapstructure:"model" yaml:"model" json:"model"`
+	IsDefault bool   `mapstructure:"is_default" yaml:"is_default" json:"is_default"`
 }
 
 var config AppConfig
@@ -48,18 +43,10 @@ func LoadConfig() (AppConfig, error) {
 
 	configDir := filepath.Join(homeDir, ".gitresume")
 	configFile := filepath.Join(configDir, "config.yaml")
-	currentUser, err := user.Current()
+	// currentUser, err := user.Current()
 
 	viper.SetConfigFile(configFile)
 	viper.SetConfigType("yaml")
-
-	// Set defaults
-	viper.SetDefault("auth_token", "")
-	viper.SetDefault("environment", "dev")
-	viper.SetDefault("summary_format", "markdown")
-	viper.SetDefault("features", []string{"auto-summary", "log-history"})
-	viper.SetDefault("user.name", currentUser.Name)
-	viper.SetDefault("user.email", "")
 
 	// Create default config if it doesn't exist
 	if _, err := os.Stat(configFile); os.IsNotExist(err) {
@@ -97,9 +84,14 @@ func SaveConfig(cfg *AppConfig) error {
 
 	v := viper.New()
 	v.SetConfigType("yaml")
-	v.Set("projects", cfg.Projects)
-	v.Set("user.name", cfg.User.Name)
-	v.Set("user.email", cfg.User.Email)
+	if cfg.User.Name != "" && cfg.User.Email != "" {
+		v.Set("user.name", cfg.User.Name)
+		v.Set("user.email", cfg.User.Email)
+	}
+
+	if len(cfg.AiOptions) > 0 {
+		v.Set("ai_options", cfg.AiOptions)
+	}
 
 	return v.WriteConfigAs(configPath)
 }
@@ -112,35 +104,70 @@ func GetProject(path string) (User, error) {
 	return cfg.User, nil
 }
 
-func AddProject(path string, user User) error {
+func UpdateAIConfig(conf AiOptions) error {
 	cfg, err := LoadConfig()
 	if err != nil {
 		return err
 	}
-
-	if !hasGitFolder(path) {
-		return fmt.Errorf("path is not a git repository: %s", path)
+	if conf.Model == "" || conf.Name == "" {
+		return errors.New("LLM config cannot be empty")
 	}
-
-	cfg.User.Name = user.Name
-	cfg.User.Email = user.Email
-
-	for _, p := range cfg.Projects {
-		if p.Path == path {
-			return fmt.Errorf("project already exists: %s", path)
+	if cfg.AiOptions == nil {
+		cfg.AiOptions = []AiOptions{}
+	}
+	var isFound bool = false
+	if len(cfg.AiOptions) > 0 {
+		for i := range cfg.AiOptions {
+			if strings.EqualFold(cfg.AiOptions[i].Name, conf.Name) {
+				cfg.AiOptions[i].ApiKey = conf.ApiKey
+				cfg.AiOptions[i].Model = conf.Model
+				cfg.AiOptions[i].IsDefault = conf.IsDefault
+				isFound = true
+			} else {
+				cfg.AiOptions[i].IsDefault = false
+			}
 		}
 	}
 
-	project := Project{
-		Path:      path,
-		Name:      filepath.Base(path),
-		GitName:   user.Name,
-		GitEmail:  user.Email,
-		CreatedAt: time.Now(),
+	if !isFound {
+		cfg.AiOptions = append(cfg.AiOptions, conf)
 	}
-	cfg.Projects = append(cfg.Projects, project)
-	return SaveConfig(&cfg)
+
+	if err = SaveConfig(&cfg); err != nil {
+		return err
+	}
+	return nil
 }
+
+// func AddProject(path string, user User) error {
+// 	cfg, err := LoadConfig()
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	if !hasGitFolder(path) {
+// 		return fmt.Errorf("path is not a git repository: %s", path)
+// 	}
+
+// 	cfg.User.Name = user.Name
+// 	cfg.User.Email = user.Email
+
+// 	for _, p := range cfg.Projects {
+// 		if p.Path == path {
+// 			return fmt.Errorf("project already exists: %s", path)
+// 		}
+// 	}
+
+// 	project := Project{
+// 		Path:      path,
+// 		Name:      filepath.Base(path),
+// 		GitName:   user.Name,
+// 		GitEmail:  user.Email,
+// 		CreatedAt: time.Now(),
+// 	}
+// 	cfg.Projects = append(cfg.Projects, project)
+// 	return SaveConfig(&cfg)
+// }
 
 func hasGitFolder(dir string) bool {
 	gitPath := filepath.Join(dir, ".git")

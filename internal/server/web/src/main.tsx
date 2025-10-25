@@ -1,10 +1,79 @@
-import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import App from "./App.tsx";
 import "./index.css";
 
+import { createBrowserRouter, RouterProvider } from "react-router";
+import CreateResume from "./pages/resume/Create.tsx";
+import Resume from "./pages/resume/Resume.tsx";
+import Setting from "./pages/setting/Setting.tsx";
+import LLMConfig from "./pages/setting/LLMConfig.tsx";
+import CloudConfig from "./pages/setting/CloudConfig.tsx";
+
+const router = createBrowserRouter([
+  {
+    path: "/",
+    lazy: async () => {
+      const module = await import("./pages/home/Homepage.tsx");
+      return { Component: module.default };
+    },
+  },
+  {
+    path: "/projects",
+    lazy: async () => {
+      const module = await import("./pages/projects/Projects.tsx");
+      return { Component: module.default };
+    },
+  },
+  {
+    path: "/resumes",
+    lazy: async () => {
+      const module = await import("./components/resume/ResumeLayout.tsx");
+      return { Component: module.default };
+    },
+    children: [
+      {
+        index: true,
+        element: <Resume />,
+      },
+      {
+        path: "create",
+        element: <CreateResume />,
+      },
+      {
+        path: ":id",
+        element: <CreateResume />,
+      },
+    ],
+  },
+  {
+    path: "/interview",
+    lazy: async () => {
+      const module = await import("./pages/interview/Interview.tsx");
+      return { Component: module.default };
+    },
+  },
+  {
+    path: "/settings",
+    lazy: async () => {
+      const module = await import("./components/setting/SettingLayout.tsx");
+      return { Component: module.default };
+    },
+    children: [
+      {
+        index: true,
+        element: <Setting />,
+      },
+      {
+        path: "llm",
+        element: <LLMConfig />,
+      },
+      {
+        path: "cloud",
+        element: <CloudConfig />,
+      },
+    ],
+  },
+]);
+
 createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
+  <RouterProvider router={router} />,
 );

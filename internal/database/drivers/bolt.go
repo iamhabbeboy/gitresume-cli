@@ -1,26 +1,21 @@
-package database
+package drivers
 
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 
-	// "log"
 	"path/filepath"
-	"sync"
 
 	"os"
 
+	"github.com/google/uuid"
 	"github.com/iamhabbeboy/gitresume/internal/git"
 	"github.com/iamhabbeboy/gitresume/util"
 	bolt "go.etcd.io/bbolt"
 )
 
-const DEV_COMMIT_DB_FILE = "gitresume.db"
-
-var (
-	instance *Db
-	once     sync.Once
-)
+const DEV_COMMIT_DB_FILE = "gitresume_bolt.db"
 
 type Db struct {
 	Db   *bolt.DB
@@ -32,21 +27,104 @@ type KV struct {
 	Value string `json:"value"`
 }
 
-func New(name string) *Db {
+func NewBolt() (*Db, error) {
+	name := util.PROJECT_BUCKET
 	store := filepath.Join(os.Getenv("HOME"), ".gitresume", DEV_COMMIT_DB_FILE)
 	db, _ := bolt.Open(store, 0600, nil)
-	return &Db{Db: db, Name: name}
+	return &Db{Db: db, Name: name}, nil
 }
 
 func (d *Db) Close() error {
 	return d.Db.Close()
 }
 
-func (d *Db) Delete(key string) error {
+func (d *Db) Migrate() error {
 	return nil
 }
 
-func (d *Db) Store(key string, data git.Project) error {
+func (c *Db) CreateOrUpdateWorkExperiences(rID int64, w []git.WorkExperience) ([]int64, error) {
+	return nil, nil
+}
+
+func (c *Db) DeleteWorkExperience(wID int64) error {
+	return nil
+}
+
+func (s *Db) UpdateResume(uID int64, req git.Resume) (int64, error) {
+	return 0, nil
+}
+
+func (s *Db) UpdateUser(uID int64, req git.Profile) error {
+	return nil
+}
+
+func (c *Db) DeleteResume(rID int64) error {
+	return nil
+}
+
+func (s *Db) GetResumes() ([]git.Resume, error) {
+	return nil, nil
+}
+
+func (d *Db) GetUser(email string) (git.Profile, error) {
+	return git.Profile{}, nil
+}
+
+func (d *Db) GetUserByID(uID int32) (git.Profile, error) {
+	return git.Profile{}, nil
+}
+
+func (d *Db) GetResume(ID int64) (git.Resume, error) {
+	return git.Resume{}, nil
+}
+
+func (c *Db) DeleteEducation(wID int64) error {
+	return nil
+}
+
+func (s *Db) CreateOrUpdateEducation(rID int64, data []git.Education) ([]int64, error) {
+	return nil, nil
+}
+
+func (d *Db) CreateUser(data git.Profile) (int64, error) {
+	return 0, nil
+}
+
+func (d *Db) CreateResume(r git.Resume) (git.Resume, error) {
+	return git.Resume{}, nil
+}
+
+func (d *Db) GetProjectByName(name string) (git.Project, error) {
+	return git.Project{}, nil
+}
+
+func (d *Db) Delete(key string) error {
+	err := d.Db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(d.Name))
+		err := b.Delete([]byte(key))
+		return err
+	})
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (d *Db) GetCommitById(id int) (git.GitCommit, error) {
+	return git.GitCommit{}, nil
+}
+
+func (s *Db) UpsertCommit(commits []git.CustomUpdateCommit) error {
+	return nil
+}
+
+func (s *Db) GetAllCommitSummary(projectID int) ([]git.CustomUpdateCommit, error) {
+	return nil, nil
+}
+
+func (d *Db) Store(data git.Project) error {
+	key := uuid.New().String()
 	err := d.Db.Update(func(tx *bolt.Tx) error {
 		bucket, err := tx.CreateBucketIfNotExists([]byte(d.Name))
 		if err != nil {
@@ -69,7 +147,7 @@ func (d *Db) Store(key string, data git.Project) error {
 	return nil
 }
 
-func (d *Db) GetAllProject() ([]git.Project, error) {
+func (d *Db) GetAllProject(limit, offset int) ([]git.Project, error) {
 	var results []git.Project
 
 	err := d.Db.View(func(tx *bolt.Tx) error {
@@ -107,9 +185,9 @@ func (d *Db) GetAllProject() ([]git.Project, error) {
 					commits = append(commits, commit)
 				}
 			}
-
+			_id, _ := strconv.Atoi(string(k))
 			results = append(results, git.Project{
-				ID:      string(k), // 👈 the sub-bucket key (project ID)
+				ID:      _id, // 👈 the sub-bucket key (project ID)
 				Name:    name,
 				Commits: commits,
 			})
@@ -138,11 +216,4 @@ func (d *Db) GetAll() (error, []KV) {
 		return err, nil
 	}
 	return nil, result
-}
-
-func GetInstance() *Db {
-	once.Do(func() {
-		instance = New(util.PROJECT_BUCKET)
-	})
-	return instance
 }
