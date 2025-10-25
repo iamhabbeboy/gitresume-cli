@@ -50,12 +50,8 @@ func ConvertNullToSlice[T any](b []byte, out *[]T) error {
 	}
 
 	isEmpty := false
-	if len(tmp) == 0 {
-		// v := tmp[0]
-		// fmt.Println(reflect.DeepEqual(tmp[0], *new(T)))
-		if reflect.DeepEqual(tmp[0], *new(T)) {
-			isEmpty = true
-		}
+	if len(tmp) == 0 && reflect.DeepEqual(tmp, *new(T)) {
+		isEmpty = true
 	}
 
 	if isEmpty {

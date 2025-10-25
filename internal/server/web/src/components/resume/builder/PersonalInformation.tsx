@@ -3,7 +3,7 @@ import { Label } from "../../ui/Label";
 import GREditor from "../../ui/GREditor";
 import { useResumeStore } from "../../../store/resumeStore";
 import { Button } from "../../ui/Button";
-import { Plus } from "lucide-react";
+import { CircleCheck, Info, Plus } from "lucide-react";
 import { useState } from "react";
 import { isValidUrl, t } from "../../../util/config";
 
@@ -19,12 +19,19 @@ const PersonalInformation = () => {
   const handleSaveLinks = () => {
     if (link === "") return;
     if (!isValidUrl(link)) {
-      return t("We couldn’t recognize that as a valid web link", "warning");
+      return t({
+        message: "We couldn’t recognize that as a valid web link",
+        icon: <Info />,
+      });
     }
-    const prevLinks = [...resume.profile.links || [], link];
+    const prevLinks = [...(resume.profile.links || []), link];
     const payload = { ...resume.profile, links: prevLinks };
     updateProfile(payload);
     setLink("");
+    return t({
+      message: "Link updated successfully",
+      icon: <CircleCheck />,
+    });
   };
 
   const deleteLink = (index: number) => {
@@ -80,7 +87,9 @@ const PersonalInformation = () => {
         />
       </div>
       <div>
-        <Label htmlFor="summary" className="my-1">Professional Summary</Label>
+        <Label htmlFor="summary" className="my-1">
+          Professional Summary
+        </Label>
         <GREditor
           placeholder="Brief overview of your professional background and goals..."
           value={resume.profile.professional_summary}

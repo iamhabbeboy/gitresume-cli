@@ -24,7 +24,7 @@ const ProjectList: React.FC<
 
   return (
     <ul>
-      {projects.map((project, key) => (
+      {(projects ?? []).map((project, key) => (
         <li
           className={`py-3 pl-2 border-b border-gray-300 cursor-pointer justify-between flex ${
             Number(project.id) === selectedProject?.id ? "bg-gray-50" : ""

@@ -1,4 +1,4 @@
-import { Bounce, toast, type ToastOptions } from "react-toastify";
+import { toast, type ToastT } from "sonner";
 
 export const baseUri = import.meta.env.VITE_APP_API_BASE_URL as string;
 export const defaultTitle = "What's the job title?";
@@ -22,26 +22,24 @@ export const stripProtocol = (input: string): string => {
     }
 };
 
-const toastConfig: ToastOptions<unknown> = {
-    position: "bottom-center",
-    autoClose: 5000,
-    hideProgressBar: false,
-    closeOnClick: false,
-    pauseOnHover: true,
-    draggable: true,
-    progress: undefined,
-    theme: "light",
-    transition: Bounce,
-};
-
-export const t = (
-    msg: string,
-    type?: "success" | "warning" | "info" | "error",
+export const t = (conf: {
+    message: string,
+    icon?: React.ReactNode,
+    description?: string
+}
 ) => {
-    if (type) {
-        toastConfig.type = type;
+    const config: ToastT = {
+        duration: 5000,
+        id: Date.now()
     }
-    toast(msg, toastConfig);
+    if(conf.icon) {
+        config.icon = conf.icon
+    }
+
+    if(conf.description) {
+        config.description = conf.description
+    }
+    toast(conf.message, config);
 };
 
 export const htmlListToArray = (html: string): string[] => {

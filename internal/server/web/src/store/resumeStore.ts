@@ -25,7 +25,7 @@ interface ResumeState {
   patchResume: (resume: Partial<Resume>) => void;
   createResume: () => Promise<Partial<Resume>>;
   fetchResumeById: (
-    id: number,
+    id: number
   ) => Promise<{ success: boolean; error: null | string }>;
   upsertEducation: (edu: Education[]) => void;
   patchEducation: (edu: Education[]) => void;
@@ -40,7 +40,7 @@ interface ResumeState {
   deleteResume: (id: number) => void;
   updateLinks: (links: string[]) => void;
   summarizeResponsibility: (
-    data: string[],
+    data: string[]
   ) => Promise<{ success: boolean; data: string[]; error: null | string }>;
 }
 
@@ -153,7 +153,7 @@ export const useResumeStore = create<ResumeState>()(
         })),
       addWorkExperiences: (
         workExperiences: WorkExperience[],
-        prjIDs: string[],
+        prjIDs: string[]
       ) => {
         const newExp = workExperiences.map((wk) => ({
           company: wk.company,
@@ -209,6 +209,7 @@ export const useResumeStore = create<ResumeState>()(
       },
       updateResume: async () => {
         try {
+          set((state) => ({ ...state.resume, loading: true }));
           const resume = get().resume;
           const payload: Partial<Resume> = {
             id: resume.id,
@@ -217,12 +218,12 @@ export const useResumeStore = create<ResumeState>()(
             is_published: false,
             profile: resume.profile,
           };
-          await axios.put(
-            `${baseUri}/api/resumes/${resume.id}`,
-            payload,
-          );
+          await axios.put(`${baseUri}/api/resumes/${resume.id}`, payload);
         } catch (e) {
-          console.error(e);
+          const message = e instanceof Error ? e.message : "Unknown error";
+          set((state) => ({ ...state.resume, error: message }));
+        } finally {
+          set((state) => ({ ...state.resume, loading: false }));
         }
       },
       useDebounce: debounce(() => {
@@ -312,7 +313,7 @@ export const useResumeStore = create<ResumeState>()(
         try {
           const request = await axios.put(
             `${baseUri}/api/work-experiences/${resumeId}`,
-            { work_experiences: data },
+            { work_experiences: data }
           );
           const ids = request.data.data.ids;
           const hasId = ids.every((id: number) => id === 0);
@@ -341,7 +342,7 @@ export const useResumeStore = create<ResumeState>()(
         try {
           const request = await axios.put(
             `${baseUri}/api/educations/${resumeId}`,
-            { education },
+            { education }
           );
 
           const ids = request.data.data.ids;
@@ -365,7 +366,7 @@ export const useResumeStore = create<ResumeState>()(
         try {
           const request = await axios.put(
             `${baseUri}/api/resumes/${resumeId}`,
-            payload,
+            payload
           );
           console.log(request);
         } catch (e) {
@@ -423,10 +424,12 @@ export const useResumeStore = create<ResumeState>()(
         }));
       },
       summarizeResponsibility: async (
-        commits: string[],
-      ): Promise<
-        { success: boolean; data: string[]; error: null | string }
-      > => {
+        commits: string[]
+      ): Promise<{
+        success: boolean;
+        data: string[];
+        error: null | string;
+      }> => {
         try {
           set((state) => ({ ...state, loading: true }));
           const { data } = await axios.post(`${baseUri}/api/ai`, {
@@ -465,13 +468,13 @@ export const useResumeStore = create<ResumeState>()(
     }),
     {
       name: "resume-storage",
-    },
-  ),
+    }
+  )
 );
 
 function debounce<T extends (...args: unknown[]) => void>(
   fn: T,
-  delay: number,
+  delay: number
 ) {
   let timer: NodeJS.Timeout;
   return (...args: Parameters<T>) => {

@@ -327,10 +327,16 @@ func (s *sqliteDB) GetAllProject(limit, offset int) ([]git.Project, error) {
 }
 
 func (s *sqliteDB) CreateResume(r git.Resume) (git.Resume, error) {
+	skillJSON := "[]"
+	if len(r.Skills) > 0 {
+		j, _ := json.Marshal(r.Skills)
+		skillJSON = string(j)
+	}
+
 	query := `
-	   INSERT INTO resumes (user_id, version, title, created_at, updated_at)
-	    VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) `
-	row, err := s.conn.Exec(query, uID, r.Version, r.Title)
+	   INSERT INTO resumes (user_id, version, title, skills, created_at, updated_at)
+	    VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
+	row, err := s.conn.Exec(query, uID, r.Version, r.Title, skillJSON)
 	if err != nil {
 		return git.Resume{}, err
 	}

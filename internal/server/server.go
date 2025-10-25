@@ -34,12 +34,32 @@ func Serve(db database.IDatabase) {
 	mux.Handle("/manifest.json", http.FileServer(http.FS(dist)))
 	mux.Handle("/loading.svg", http.FileServer(http.FS(dist)))
 
-	// API endpoints
+	// ---- API endpoints ----
+	//Config
 	mux.HandleFunc("/api/ai", AiHandler)
+	mux.HandleFunc("/api/config", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPut:
+			AIConfigHandler(db)(w, r)
+		case http.MethodGet:
+			GetAIConfigHandler(db)(w, r)
+		// case http.MethodDelete:
+		// 	DeleteResumesHandler(db)(w, r)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+	mux.HandleFunc("/api/export", ExportResumeHandler)
+
+	// User
 	mux.HandleFunc("/api/users", UserHandler)
 	mux.HandleFunc("/api/users/{id}", GetUserHandler(db))
+
+	// Project
 	mux.HandleFunc("/api/projects", ProjectsHandler(db))
 	mux.HandleFunc("/api/projects/{id}", ProjectHandler(db))
+
+	// Resumes
 	mux.HandleFunc("/api/resumes", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost:
@@ -50,6 +70,8 @@ func Serve(db database.IDatabase) {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
 	})
+
+	mux.HandleFunc("/api/resumes/{id}/duplicate", ResumeCopyHandler(db))
 
 	mux.HandleFunc("/api/resumes/{id}", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
@@ -64,16 +86,20 @@ func Serve(db database.IDatabase) {
 		}
 	})
 	mux.HandleFunc("/api/commits/bulk-update", BulkUpdateCommitMessageHandler(db))
+
+	// Work Experience
 	mux.HandleFunc("/api/work-experiences/{id}", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPut:
-			CreateOrUpdateWorkExperiencesHandler(db)
+			CreateOrUpdateWorkExperiencesHandler(db)(w, r)
 		case http.MethodDelete:
-			DeleteWorkExperienceHandler(db)
+			DeleteWorkExperienceHandler(db)(w, r)
 		default:
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
 	})
+
+	// Education
 	mux.HandleFunc("/api/educations/{id}", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPut:
@@ -84,8 +110,6 @@ func Serve(db database.IDatabase) {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
 	})
-
-	mux.HandleFunc("/api/export", ExportResumeHandler)
 
 	middlewares := []Middleware{
 		CORSSecurityMiddleware,

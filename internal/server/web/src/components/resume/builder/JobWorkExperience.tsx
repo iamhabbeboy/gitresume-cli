@@ -3,7 +3,14 @@ import { useResumeStore } from "../../../store/resumeStore";
 import type { OptionType, WorkExperience } from "../type";
 import { htmlListToArray, t } from "../../../util/config";
 import { Button } from "../../ui/Button";
-import { Bot, ChevronDown, ChevronRight, Trash2 } from "lucide-react";
+import {
+  Bot,
+  ChevronDown,
+  ChevronRight,
+  CircleCheck,
+  Info,
+  Trash2,
+} from "lucide-react";
 import Select from "react-dropdown-select";
 import GREditor from "../../ui/GREditor";
 import { Input } from "../../ui/Input";
@@ -13,9 +20,12 @@ import { useStore } from "../../../store";
 import type { CommitMessage } from "../../../types/project";
 import { transformTech } from "../../../../lib/utils";
 import Spinner from "../../Spinner";
+import { toast, Toaster } from "sonner";
+import _ from "lodash";
 const JobWorkExperience = () => {
   const {
     loading,
+    updateSkills,
     upsertExperience,
     resume,
     deleteExperience,
@@ -29,17 +39,19 @@ const JobWorkExperience = () => {
   const [version, setVersion] = useState(-1);
   const experiences = resume.work_experiences;
   const [techStacks, setTechStacks] = useState<string[]>([]);
+  const [openId, setOpenId] = useState<number | null>(null);
+  const [lastChangedExpId, setLastChangedExpId] = useState<number>(-1);
 
   const updateExp = (id: number, value: Partial<WorkExperience>) => {
     const values = experiences.map((exp, index) =>
       index === id ? { ...exp, ...value } : exp
     );
+    setLastChangedExpId(id);
     patchExperience(values);
   };
 
   const handleProjectSelection = async (values: OptionType[], id: number) => {
     setVersion(0);
-    updateExp(id, { projects: values.map((prj) => prj.label) });
     setProjects(values);
     setHasProjectSelected(!!values.length);
     await handleAddResponsibility(version, id, values);
@@ -101,9 +113,15 @@ const JobWorkExperience = () => {
   `;
     const update = experiences.map((exp, idx) =>
       idx === experienceIndex
-        ? { ...exp, responsibilities: responsibilitiesHTML }
+        ? {
+          ...exp,
+          responsibilities: responsibilitiesHTML,
+          projects: selectedProjects.map((value) => value.label),
+        }
         : exp
     );
+    const stack = [...techStacks, ...resume.skills];
+    updateSkills(_.uniq(stack));
     patchExperience(update);
   };
 
@@ -114,14 +132,13 @@ const JobWorkExperience = () => {
 
   const projectList = useMemo(
     () =>
-      store.projects.map((p) => ({
+      store.projects?.map((p) => ({
         label: p.name,
         value: Number(p.id),
       })),
     [store.projects],
   );
 
-  const [openId, setOpenId] = useState<number | null>(null);
   const handleCollapse = (id: number) => {
     setOpenId(openId === id ? null : id);
   };
@@ -129,19 +146,35 @@ const JobWorkExperience = () => {
   const handleCreateExperience = async () => {
     const status = await upsertExperience(experiences);
     if (status) {
-      return t("Experience successfully added", "success");
+      handleCollapse(lastChangedExpId);
+      return t({
+        message: "Experience successfully added",
+        icon: <CircleCheck />,
+      });
     }
+    // toast("This is an action toast", {
+    //   action: {
+    //     label: "Close",
+    //     onClick: () => console.log("Action!"),
+    //   },
+    // });
   };
 
   const handleSummarize = async (data: string, expId: number) => {
     const transform = htmlListToArray(data);
     const resp = await summarizeResponsibility(transform);
     if (!resp.success) {
-      return t("An error occurred while processing your request", "warning");
+      return t({
+        message: "An error occurred while processing your request",
+        icon: <Info />,
+      });
     }
 
     if (data.length === 0) {
-      return t("No response from the AI infrastucture", "info");
+      return t({
+        message: "No response from the AI infrastucture",
+        icon: <Info />,
+      });
     }
     const responsibilitiesHTML = `
       <ul>

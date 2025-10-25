@@ -2,6 +2,7 @@ import { Bot, Server, UserRoundPen } from "lucide-react";
 import { Link, Outlet } from "react-router";
 import Layout from "../../components/Layout";
 import { useLocation } from "react-router";
+import { Toaster } from "sonner";
 
 const SettingLayout = () => {
   const location = useLocation();
@@ -31,7 +32,7 @@ const SettingLayout = () => {
             >
               <Bot size={20} /> LLM Setting
             </Link>
-            <Link
+            {/* <Link
               to="/settings/cloud"
               className={`px-2 hover:bg-gray-100 py-3 border-b border-gray-300 block w-full text-sm flex gap-2 ${
                 location.pathname === "/settings/cloud"
@@ -40,10 +41,11 @@ const SettingLayout = () => {
               }`}
             >
               <Server size={20} /> Cloud Setting
-            </Link>
+            </Link> */}
           </div>
           <div className="w-10/12 border border-gray-300 mt-3 rounded-md">
             <Outlet />
+            <Toaster />
           </div>
         </div>
       </section>

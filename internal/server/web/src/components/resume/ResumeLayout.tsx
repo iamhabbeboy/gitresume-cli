@@ -4,6 +4,8 @@ import { useLocation } from "react-router";
 import { useResumeStore } from "../../store/resumeStore";
 import { useEffect } from "react";
 import { t } from "../../util/config";
+import { Toaster } from "sonner";
+import { Info } from "lucide-react";
 
 const ResumeLayout = () => {
   const location = useLocation();
@@ -18,7 +20,10 @@ const ResumeLayout = () => {
     if (resp.id) {
       return router(`/resumes/${resp.id}`);
     }
-    return t("An error occured while creating a new resume", "error");
+    return t({
+      message: "An error occured while creating a new resume",
+      icon: <Info />,
+    });
   };
 
   useEffect(() => {
@@ -38,13 +43,11 @@ const ResumeLayout = () => {
       <div className="w-full">
         <div className="flex justify-between mb-5">
           <div>
-            {
-              /* {isListing && (
+            {/* {isListing && (
               <Link className="text-gray-500 underline" to="/resumes">
                 Back{" "}
               </Link>
-            )} */
-            }
+            )} */}
             <h3 className="text-lg border-gray-300 font-bold">Resume</h3>
           </div>
           <div>
@@ -62,6 +65,7 @@ const ResumeLayout = () => {
         <div className="relative overflow-x-auto sm:rounded-lg">
           {/* Nested pages show up here */}
           <Outlet />
+          <Toaster />
         </div>
       </div>
     </Layout>

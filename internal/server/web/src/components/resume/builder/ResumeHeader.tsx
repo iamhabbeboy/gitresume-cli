@@ -2,10 +2,11 @@ import { useState } from "react";
 import { useResumeStore } from "../../../store/resumeStore";
 import { prependTailwindHTMLForExport } from "../../../../lib/utils";
 import axios from "axios";
-import { Download } from "lucide-react";
+import { CopyCheck, Download, Info } from "lucide-react";
 import { baseUri, defaultTitle, t } from "../../../util/config";
 import Spinner from "../../Spinner";
 import { Button } from "../../ui/Button";
+import { useNavigate } from "react-router";
 
 type Props = {
   id: string;
@@ -29,7 +30,7 @@ const ResumeHeader: React.FC<Props> = ({ id, resumeHTML }) => {
 
   const handleDownload = async () => {
     if (format === "") {
-      return t("Select a export format", "error");
+      return t({ message: "Select a export format", icon: <Info /> });
     }
     try {
       setIsDownloading(true);
@@ -41,7 +42,7 @@ const ResumeHeader: React.FC<Props> = ({ id, resumeHTML }) => {
         {
           headers: { "Content-Type": "text/html" },
           responseType: "blob",
-        },
+        }
       );
       const blob = new Blob([res.data], {
         type: res.headers["content-type"],
@@ -57,9 +58,30 @@ const ResumeHeader: React.FC<Props> = ({ id, resumeHTML }) => {
       // clean up
       window.URL.revokeObjectURL(url);
     } catch (e) {
-      console.log(e);
+      const message = e instanceof Error ? e.message : "Unkonwn error";
+      console.log(message);
+      t({ message, icon: <Info /> });
     } finally {
       setIsDownloading(false);
+    }
+  };
+  const router = useNavigate();
+  const [isLoadingDuplicate, setIsLoadingDuplicate] = useState(false);
+
+  const handleCopyResume = async () => {
+    try {
+      setIsLoadingDuplicate(true);
+      const res = await axios.get(`${baseUri}/api/resumes/${id}/duplicate`, {
+        headers: { "Content-Type": "application/json" },
+      });
+      if (res.data.data) {
+        return router(`/resumes/${res.data.data}`);
+      }
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Unknown error";
+      t({ message, icon: <Info /> });
+    } finally {
+      setIsLoadingDuplicate(false);
     }
   };
 
@@ -68,10 +90,10 @@ const ResumeHeader: React.FC<Props> = ({ id, resumeHTML }) => {
       <div
         className={`w-10/12 text-gray-700 text-2xl p-2 focus:outline-none focus:border-blue-500 focus:ring-0
               empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400 empty:before:pointer-events-none transition ${
-          isEditable
-            ? "border-b border-border border-gray-500 bg-gray-100"
-            : "border-transparent bg-white cursor-pointer"
-        }`}
+                isEditable
+                  ? "border-b border-border border-gray-500 bg-gray-100"
+                  : "border-transparent bg-white cursor-pointer"
+              }`}
         contentEditable={isEditable}
         suppressContentEditableWarning={true}
         onClick={() => !isEditable && setIsEditable(true)}
@@ -81,9 +103,7 @@ const ResumeHeader: React.FC<Props> = ({ id, resumeHTML }) => {
         onKeyDown={(e) => {
           if (e.key === "Enter") {
             e.preventDefault();
-            handleChangeTitle(
-              e.currentTarget.textContent as string,
-            );
+            handleChangeTitle(e.currentTarget.textContent as string);
           }
         }}
       >
@@ -105,7 +125,15 @@ const ResumeHeader: React.FC<Props> = ({ id, resumeHTML }) => {
           disabled={isDownloading}
         >
           {isDownloading ? <Spinner /> : <Download className="h-4 w-4" />}
-          Download PDF
+          Download
+        </Button>
+        <Button
+          onClick={handleCopyResume}
+          className="gap-2 bg-yellow-600 text-white hover:bg-yellow-700 transition"
+          disabled={isLoadingDuplicate}
+        >
+          {isLoadingDuplicate ? <Spinner /> : <CopyCheck className="h-4 w-4" />}
+          Make a copy
         </Button>
       </div>
     </header>

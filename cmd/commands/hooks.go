@@ -18,12 +18,14 @@ import (
 )
 
 func SetupHook(db database.IDatabase) error {
-	homeDir, _ := os.UserHomeDir()
-	folderPath := filepath.Join(homeDir, "."+util.APP_NAME+"/config.yaml")
-	_, err := os.Stat(folderPath)
-	if !os.IsNotExist(err) {
-		return errors.New("config already initialized. use the 'gitresume seed' command to sync your project")
-	}
+	// homeDir, _ := os.UserHomeDir()
+	// folderPath := filepath.Join(homeDir, "."+util.APP_NAME+"/config.yaml")
+	// _, err := os.Stat(folderPath)
+	// if !os.IsNotExist(err) {
+	// 	return errors.New("config already initialized. use the 'gitresume seed' command to sync your project")
+	// }
+
+	// set default llm config to llama
 
 	if err := db.Migrate(); err != nil {
 		return err
@@ -70,7 +72,13 @@ func SetupHook(db database.IDatabase) error {
 			Name:  userCfg["name"],
 			Email: userCfg["email"],
 		},
+		AiOptions: []config.AiOptions{{
+			Name:   "llama",
+			Model:  "llama3.2",
+			ApiKey: "",
+		}},
 	})
+
 	// err = config.AddProject(path, u)
 	if err != nil {
 		return err

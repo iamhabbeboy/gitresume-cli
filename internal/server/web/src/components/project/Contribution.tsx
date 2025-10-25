@@ -22,7 +22,7 @@ const Contribution: React.FC<{ selectedProject: Prop | null }> = (
   const handleFetchCommits = useCallback((index: number = 0) => {
     setTab(index);
     let result = [];
-    const filter = store.projects.find((p) =>
+    const filter = store.projects?.find((p) =>
       Number(p.id) === selectedProject?.id
     );
     result = filter?.commits || [];
@@ -83,7 +83,7 @@ const Contribution: React.FC<{ selectedProject: Prop | null }> = (
               />
             </div>
             <h1 className="text-2xl text-gray-400">
-              {store.projects.length > 0
+              {store.projects?.length > 0
                 ? "Select a project"
                 : "No project available"}
             </h1>
@@ -101,7 +101,7 @@ const Contribution: React.FC<{ selectedProject: Prop | null }> = (
               <p className="text-sm text-gray-500">
                 Below is the list of your contributions for this project{" "}
               </p>
-              {tech.length > 0 && (
+              {tech?.length > 0 && (
                 <p className="text-sm text-gray-600">
                   <b>Technology:</b> {tech.join(", ")}
                 </p>

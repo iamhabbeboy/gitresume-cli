@@ -4,10 +4,11 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/iamhabbeboy/gitresume/cmd/commands"
+	"github.com/iamhabbeboy/gitresume/config"
 	"github.com/iamhabbeboy/gitresume/internal/database"
-	"github.com/iamhabbeboy/gitresume/internal/git"
 	"github.com/spf13/cobra"
 )
 
@@ -22,7 +23,12 @@ import (
 * gitresume dashboard
  */
 
-var db database.IDatabase
+var (
+	aiName string
+	apiKey string
+	model  string
+	db     database.IDatabase
+)
 
 var rootCmd = &cobra.Command{
 	Use:   "gitresume",
@@ -36,10 +42,15 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
+	aiConfigCmd.Flags().StringVar(&aiName, "name", "", "Name of the AI provider (e.g. openai)")
+	aiConfigCmd.Flags().StringVar(&apiKey, "api-key", "", "API key for the AI provider")
+	aiConfigCmd.Flags().StringVar(&model, "model", "", "A model for the AI provider")
+
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(seedCmd)
 	rootCmd.AddCommand(dashboardCmd)
-	rootCmd.AddCommand(aiTestCmd)
+	aiCmd.AddCommand(aiConfigCmd)
+	rootCmd.AddCommand(aiCmd)
 	rootCmd.AddCommand(completionCmd)
 }
 
@@ -79,7 +90,7 @@ var seedCmd = &cobra.Command{
 
 var dashboardCmd = &cobra.Command{
 	Use:   "serve",
-	Short: "Web app dashboard for your dev report",
+	Short: "Web dashboard for your dev report",
 	Run: func(cmd *cobra.Command, args []string) {
 		commands.DashboardHook(db)
 		// if err != nil {
@@ -90,18 +101,37 @@ var dashboardCmd = &cobra.Command{
 	},
 }
 
-var aiTestCmd = &cobra.Command{
+var aiConfigCmd = &cobra.Command{
+	Use:   "config",
+	Short: "Configure AI provider credentials",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if aiName == "" || apiKey == "" || model == "" {
+			return fmt.Errorf("--name, --api-key, and --model are required")
+		}
+		cfg := config.AiOptions{
+			Name:      strings.ToLower(aiName),
+			ApiKey:    apiKey,
+			Model:     model,
+			IsDefault: true,
+		}
+		if err := config.UpdateAIConfig(cfg); err != nil {
+			return fmt.Errorf("🚫 Unable to update config")
+		}
+		fmt.Printf("🎉 AI provider '%s' configured successfully \n", aiName)
+		return nil
+	},
+}
+
+var aiCmd = &cobra.Command{
 	Use:   "ai",
-	Short: "Test AI integration",
+	Short: "AI integration",
 	Run: func(cmd *cobra.Command, args []string) {
-		d, _ := os.Getwd()
-		g := git.NewGitUtil(d)
-		t, err := g.GetStacks("iamhabbeboy@gmail.com")
+		cfg, err := config.LoadConfig()
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
-		fmt.Println(t)
+		fmt.Println(cfg)
 		// err := commands.AiTestHook()
 		// if err != nil {
 		// 	fmt.Println("Failed to start dashboard server:", err)

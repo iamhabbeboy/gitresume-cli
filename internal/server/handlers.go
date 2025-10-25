@@ -12,6 +12,7 @@ import (
 
 	"net/http"
 
+	"github.com/iamhabbeboy/gitresume/config"
 	"github.com/iamhabbeboy/gitresume/internal/ai"
 	"github.com/iamhabbeboy/gitresume/internal/database"
 	"github.com/iamhabbeboy/gitresume/internal/export"
@@ -40,6 +41,9 @@ type Response struct {
 
 type AiRequest struct {
 	Commits []string `json:"commits"`
+}
+
+type AiConfigRequest struct {
 }
 
 type CommitUpdateRequest struct {
@@ -128,6 +132,49 @@ func getAllCommits(db database.IDatabase) (Response, error) {
 	resp.Message = "success"
 	resp.Data = data
 	return resp, nil
+}
+
+func AIConfigHandler(db database.IDatabase) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req config.AiOptions
+		err := json.NewDecoder(r.Body).Decode(&req)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if err := config.UpdateAIConfig(req); err != nil {
+			log.Println(err.Error())
+			http.Error(w, "Unable to update config", http.StatusInternalServerError)
+			return
+		}
+		resp := Response{
+			Message: "success",
+			Status:  http.StatusCreated,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(resp)
+	}
+}
+
+func GetAIConfigHandler(db database.IDatabase) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		cfg, err := config.LoadConfig()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		result := []config.AiOptions{}
+		if len(cfg.AiOptions) > 0 {
+			result = cfg.AiOptions
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(result)
+	}
 }
 
 func AiHandler(w http.ResponseWriter, r *http.Request) {
@@ -224,13 +271,13 @@ func CreateResumeHandler(db database.IDatabase) http.HandlerFunc {
 func GetResumeHandler(db database.IDatabase) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		idStr := GetID(w, r.URL.Path)
-		userID, err := strconv.Atoi(idStr)
+		rID, err := strconv.Atoi(idStr)
 		if err != nil {
 			http.Error(w, "invalid project ID: "+err.Error(), http.StatusBadRequest)
 			return
 		}
 
-		res, err := db.GetResume(int64(userID))
+		res, err := db.GetResume(int64(rID))
 		if err != nil {
 			http.Error(w, "error: "+err.Error(), http.StatusBadRequest)
 			return
@@ -481,4 +528,68 @@ func ExportResumeHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=resume.%v", ext))
 
 	w.Write(buf)
+}
+
+func ResumeCopyHandler(db database.IDatabase) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		idStr := GetCenterID(w, r.URL.Path)
+		rID, err := strconv.Atoi(idStr)
+		if err != nil {
+			http.Error(w, "error occured: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		// get resume
+		res, err := db.GetResume(int64(rID))
+		if err != nil {
+			http.Error(w, "error: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		newRs := res
+		newRs.Title = res.Title + " copy"
+		newRs.Version = res.Version + 1
+		newRes, err := db.CreateResume(newRs)
+		if err != nil {
+			http.Error(w, "error: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		if len(newRs.WorkExperiences) > 0 {
+			newExp := []git.WorkExperience{}
+			for _, v := range newRs.WorkExperiences {
+				exp := v
+				exp.ID = 0
+				newExp = append(newExp, exp)
+			}
+			_, err := db.CreateOrUpdateWorkExperiences(newRes.ID, newExp)
+			if err != nil {
+				http.Error(w, "error: "+err.Error(), http.StatusBadRequest)
+				return
+			}
+		}
+		if len(newRs.Education) > 0 {
+			newEdu := []git.Education{}
+			for _, v := range newRs.Education {
+				edu := v
+				edu.ID = 0
+				newEdu = append(newEdu, edu)
+			}
+			_, err = db.CreateOrUpdateEducation(newRes.ID, newEdu)
+			if err != nil {
+				http.Error(w, "error: "+err.Error(), http.StatusBadRequest)
+				return
+			}
+		}
+		fmt.Println("resume ID: ", newRes.ID)
+		response := Response{
+			Message: "resume duplicated successfully",
+			Status:  http.StatusCreated,
+			Data:    newRes.ID,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(response)
+	}
 }
