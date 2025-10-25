@@ -3,6 +3,7 @@ package ai
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"regexp"
@@ -13,11 +14,14 @@ type LlamaConfig struct {
 }
 
 type Request struct {
-	Model  string `json:"model"`
-	Prompt string `json:"prompt"`
-	Stream bool   `json:"stream"`
-	Format string `json:"format"`
-	Raw    bool   `json:"raw"`
+	Model       string  `json:"model"`
+	Prompt      string  `json:"prompt"`
+	Stream      bool    `json:"stream"`
+	Format      string  `json:"format"`
+	Raw         bool    `json:"raw"`
+	Temperature float64 `json:"temperature"`
+	N           int     `json:"n"`
+	TopP        int     `json:"top_p"`
 }
 
 type Response struct {
@@ -60,10 +64,13 @@ func NewLlama() *LlamaConfig {
 
 func (l *LlamaConfig) Generate(message string) (string, error) {
 	data := Request{
-		Model:  AIModel,
-		Prompt: message,
-		Stream: false,
-		Raw:    true,
+		Model:       AIModel,
+		Prompt:      message,
+		Stream:      false,
+		Raw:         true,
+		N:           1,
+		Temperature: 0.0,
+		TopP:        1,
 	}
 
 	msg, err := json.Marshal(data)
@@ -88,9 +95,9 @@ func (l *LlamaConfig) Generate(message string) (string, error) {
 	return resp.Response, nil
 }
 
-func (l *LlamaConfig) Chat(messages []string) (string, error) {
+func (l *LlamaConfig) Chat(messages []string) ([]string, error) {
 	if len(messages) == 0 {
-		return "", nil
+		return nil, errors.New("no messages")
 	}
 
 	msgs := []ChatMessage{{
@@ -116,12 +123,12 @@ func (l *LlamaConfig) Chat(messages []string) (string, error) {
 	res, err := http.Post(aiHost+aiChatEndpoint, "application/json", bytes.NewBuffer(msg))
 
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer res.Body.Close()
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	var resp ChatResponse
@@ -130,26 +137,55 @@ func (l *LlamaConfig) Chat(messages []string) (string, error) {
 	return output, nil
 }
 
-func cleanOutput(output string) string {
+func cleanOutput(output string) []string {
 	ignorePhrases := []string{
+		"Note: i've kept the bullet points concise, using action verbs and focusing on impact.",
 		"here's the transformed bullet point:",
 		"here is the transformed bullet point:",
+		"here’s the transformed bullet point:", // with typographic apostrophe
 		"transformed bullet point:",
 		"bullet point:",
+		"here are two possible bullet points:",
+		"here are some possible bullet points:",
+		"possible bullet points:",
+		"the transformed version is:",
+		"here are the transformed bullet points:",
+		"here's the improved bullet point:",
+		"here is the improved bullet point:",
+		"improved bullet point:",
+		"Here are the transformed resume bullet points:",
+		"Here is the transformed resume",
+		"Here is the transformed commit message into a resume",
+		"Here is a polished resume",
+		"Here's a possible transformation:",
 	}
 
+	// Normalize to lowercase for easier matching
 	lowered := strings.ToLower(output)
 	for _, phrase := range ignorePhrases {
 		lowered = strings.ReplaceAll(lowered, phrase, "")
 	}
 
-	line := strings.TrimSpace(lowered)
+	// Split into lines
+	lines := strings.Split(lowered, "\n")
 	re := regexp.MustCompile(`^\s*[-*•]\s*`)
-	line = re.ReplaceAllString(line, "")
 
-	if len(line) > 0 {
-		line = strings.ToUpper(line[:1]) + line[1:]
+	var cleaned []string
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+
+		// Remove leading bullet markers (-, *, •)
+		line = re.ReplaceAllString(line, "")
+
+		// Capitalize first letter if present
+		if len(line) > 0 {
+			line = strings.ToUpper(line[:1]) + line[1:]
+			cleaned = append(cleaned, line)
+		}
 	}
 
-	return line
+	return cleaned
 }

@@ -5,22 +5,23 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io"
+	"io/fs"
 	"log"
+	"strconv"
 
-	// "log"
 	"net/http"
-	"os"
 
+	"github.com/iamhabbeboy/gitresume/config"
 	"github.com/iamhabbeboy/gitresume/internal/ai"
 	"github.com/iamhabbeboy/gitresume/internal/database"
+	"github.com/iamhabbeboy/gitresume/internal/export"
 	"github.com/iamhabbeboy/gitresume/internal/git"
+	"github.com/iamhabbeboy/gitresume/util"
 )
 
-//go:embed templates/*.html
-var tmplFS embed.FS
-
-var ch = make(chan Response)
-var db = database.GetInstance()
+//go:embed web/dist/*
+var templateFS embed.FS
 
 type PageData struct {
 	Title   string
@@ -28,48 +29,80 @@ type PageData struct {
 }
 
 type ProjectResponse struct {
-	ID string `json:"id"`
+	ID int `json:"id"`
 	git.Project
 }
 
 type Response struct {
-	Message string            `json:"message"`
-	Status  int               `json:"status"`
-	Data    []ProjectResponse `json:"data"`
+	Message string `json:"message"`
+	Status  int    `json:"status"`
+	Data    any    `json:"data"`
 }
 
 type AiRequest struct {
-	Commit string `json:"commit"`
+	Commits []string `json:"commits"`
+}
+
+type AiConfigRequest struct {
+}
+
+type CommitUpdateRequest struct {
+	Data []git.CustomUpdateCommit `json:"data"`
+}
+
+var assetsFS fs.FS
+var dist fs.FS
+var tmpl *template.Template
+
+func InitReactHandler() {
+	tmpl = template.Must(template.ParseFS(templateFS, "web/dist/*.html"))
+	assetsFS, _ = fs.Sub(templateFS, "web/dist/assets")
+
+	dist, err = fs.Sub(templateFS, "web/dist")
+	if err != nil {
+		panic(fmt.Errorf("failed to load dist: %w", err))
+	}
 }
 
 func IndexHandler(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := template.ParseFS(tmplFS, "templates/index.html")
-	if err != nil {
-		fmt.Println("Error loading template:", err)
-		os.Exit(1)
-	}
-	data := PageData{
-		Title:   "Welcome Page",
-		Message: "Hello from Go Template!",
-	}
-	err = tmpl.Execute(w, data)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	tmpl.ExecuteTemplate(w, "index.html", nil)
+}
+
+func ProjectHandler(db database.IDatabase) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		idStr := GetID(w, r.URL.Path)
+		id, err := strconv.Atoi(idStr)
+		if err != nil {
+			http.Error(w, "invalid project ID", http.StatusBadRequest)
+			return
+		}
+
+		resp, _ := db.GetAllCommitSummary(id)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK) // optional, defaults to 200
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 	}
 }
 
-func ProjectHandler(w http.ResponseWriter, r *http.Request) {
-	go getAllCommits()
-	resp := <-ch
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK) // optional, defaults to 200
-	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+func ProjectsHandler(db database.IDatabase) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		resp, err := getAllCommits(db)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK) // optional, defaults to 200
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 	}
 }
 
-func getAllCommits() {
-	result, err := db.GetAllProject()
+func getAllCommits(db database.IDatabase) (Response, error) {
+	result, err := db.GetAllProject(0, 0)
 	resp := Response{
 		Message: "nothing to see",
 		Status:  http.StatusOK,
@@ -79,8 +112,12 @@ func getAllCommits() {
 	if len(result) > 0 {
 		for _, v := range result {
 			data = append(data, ProjectResponse{
-				ID:      v.ID,
-				Project: git.Project{Name: v.Name, Commits: v.Commits},
+				ID: v.ID,
+				Project: git.Project{
+					Name:         v.Name,
+					Technologies: v.Technologies,
+					Commits:      v.Commits,
+				},
 			})
 		}
 	}
@@ -89,14 +126,55 @@ func getAllCommits() {
 		log.Println(err.Error())
 		resp.Message = err.Error()
 		resp.Status = http.StatusInternalServerError
-		ch <- resp
-		return
+		return resp, err
 	}
 
 	resp.Message = "success"
 	resp.Data = data
-	ch <- resp
-	return
+	return resp, nil
+}
+
+func AIConfigHandler(db database.IDatabase) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req config.AiOptions
+		err := json.NewDecoder(r.Body).Decode(&req)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if err := config.UpdateAIConfig(req); err != nil {
+			log.Println(err.Error())
+			http.Error(w, "Unable to update config", http.StatusInternalServerError)
+			return
+		}
+		resp := Response{
+			Message: "success",
+			Status:  http.StatusCreated,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(resp)
+	}
+}
+
+func GetAIConfigHandler(db database.IDatabase) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		cfg, err := config.LoadConfig()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		result := []config.AiOptions{}
+		if len(cfg.AiOptions) > 0 {
+			result = cfg.AiOptions
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(result)
+	}
 }
 
 func AiHandler(w http.ResponseWriter, r *http.Request) {
@@ -110,11 +188,11 @@ func AiHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	chat := "You are a professional resume writer specializing in software engineering roles. Transform git commit messages into polished resume bullet points that highlight business value and technical achievements. Use action verbs, past tense, focus on impact, and keep concise (1-2 lines max). Output format: Single bullet point"
-	msg := fmt.Sprintf(`Transform this commit message into a resume bullet point: %s`, req.Commit)
+	sys := "You are a professional resume writer specializing in software engineering roles. Transform git commit messages into polished resume bullet points that highlight business value and technical achievements. Use action verbs, past tense, focus on impact, and keep concise (1-2 lines max). Output format: Single bullet point starting with •"
+	msg := fmt.Sprintf(`Transform this commit message into a resume bullet point: %s`, util.ToUserContent(req.Commits))
 
 	ai := ai.NewChatModel(ai.Llama)
-	resp, err := ai.Chat([]string{chat, msg})
+	resp, err := ai.Chat([]string{sys, msg})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusMethodNotAllowed)
 		return
@@ -122,4 +200,396 @@ func AiHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(resp)
+}
+
+func BulkUpdateCommitMessageHandler(db database.IDatabase) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPut {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		var req CommitUpdateRequest
+		err := json.NewDecoder(r.Body).Decode(&req)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		err = db.UpsertCommit(req.Data)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		resp := Response{
+			Message: "success",
+			Status:  http.StatusCreated,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(resp)
+	}
+}
+
+func CreateResumeHandler(db database.IDatabase) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		var req git.Resume
+		err := json.NewDecoder(r.Body).Decode(&req)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// j, _ := json.Marshal(req)
+		// fmt.Println(string(j))
+		resume, err := db.CreateResume(req)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		resp := Response{
+			Message: "success",
+			Status:  http.StatusCreated,
+			Data: struct {
+				ID int64 `json:"id"`
+			}{
+				ID: resume.ID,
+			},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(resp)
+	}
+}
+
+func GetResumeHandler(db database.IDatabase) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		idStr := GetID(w, r.URL.Path)
+		rID, err := strconv.Atoi(idStr)
+		if err != nil {
+			http.Error(w, "invalid project ID: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		res, err := db.GetResume(int64(rID))
+		if err != nil {
+			http.Error(w, "error: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		// res := Response{
+		// 	Message: "success",
+		// 	Status:  http.StatusCreated,
+		// }
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(res)
+	}
+}
+
+func GetAllResumesHandler(db database.IDatabase) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		res, err := db.GetResumes()
+		if err != nil {
+			http.Error(w, "error: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		// res := Response{
+		// 	Message: "success",
+		// 	Status:  http.StatusCreated,
+		// }
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(res)
+	}
+}
+
+func UserHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req git.Profile
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Println(req)
+	res := "Hello world"
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(res)
+}
+
+func GetUserHandler(db database.IDatabase) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		idStr := GetID(w, r.URL.Path)
+		userID, err := strconv.Atoi(idStr)
+		if err != nil {
+			http.Error(w, "invalid project ID: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		res, err := db.GetUserByID(int32(userID))
+		if err != nil {
+			http.Error(w, "failed to retrieve users: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(res)
+	}
+}
+
+func UpdateResumeHandler(db database.IDatabase) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPut {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		idStr := GetID(w, r.URL.Path)
+		rID, err := strconv.Atoi(idStr)
+		if err != nil {
+			http.Error(w, "invalid project ID: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		var req git.Resume
+		err = json.NewDecoder(r.Body).Decode(&req)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		wkID, err := db.UpdateResume(int64(rID), req)
+		if err != nil {
+			http.Error(w, "error occured: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		res := Response{
+			Message: "resume updated successfully",
+			Status:  http.StatusCreated,
+			Data: struct {
+				ID int64 `json:"id"`
+			}{
+				ID: wkID,
+			},
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(res)
+	}
+}
+
+func DeleteResumesHandler(db database.IDatabase) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodDelete {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		idStr := GetID(w, r.URL.Path)
+		rID, err := strconv.Atoi(idStr)
+		if err != nil {
+			http.Error(w, "invalid resume ID: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		if err := db.DeleteResume(int64(rID)); err != nil {
+			http.Error(w, "error: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		res := Response{
+			Message: "resume deleted successfully",
+			Status:  http.StatusCreated,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(res)
+	}
+}
+
+func DeleteWorkExperienceHandler(db database.IDatabase) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodDelete {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		idStr := GetID(w, r.URL.Path)
+		wkID, err := strconv.Atoi(idStr)
+		if err != nil {
+			http.Error(w, "invalid work experience ID: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		if err := db.DeleteWorkExperience(int64(wkID)); err != nil {
+			http.Error(w, "invalid work experience ID: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		res := Response{
+			Message: "work experience deleted successfully",
+			Status:  http.StatusCreated,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(res)
+	}
+}
+
+func CreateOrUpdateWorkExperiencesHandler(db database.IDatabase) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPut {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		idStr := GetID(w, r.URL.Path)
+		rID, err := strconv.Atoi(idStr)
+		if err != nil {
+			http.Error(w, "invalid project ID: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		var req git.Resume
+		err = json.NewDecoder(r.Body).Decode(&req)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		wkIDs, err := db.CreateOrUpdateWorkExperiences(int64(rID), req.WorkExperiences)
+		if err != nil {
+			http.Error(w, "error occured: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		res := Response{
+			Message: "resume updated successfully",
+			Status:  http.StatusCreated,
+			Data: struct {
+				ID []int64 `json:"ids"`
+			}{
+				ID: wkIDs,
+			},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(res)
+	}
+}
+
+func ExportResumeHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	query := r.URL.Query()
+	etype := query.Get("format")
+	var (
+		format      export.ExportType
+		contentType string
+		ext         string
+	)
+
+	switch etype {
+	case "pdf":
+		format = export.PDF
+		ext = "pdf"
+		contentType = "application/pdf"
+	case "md":
+		format = export.Markdown
+		ext = "md"
+		contentType = "text/markdown; charset=utf-8"
+	case "docx":
+		format = export.Docx
+		ext = "docx"
+		contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+	}
+	exp, _ := export.NewExport(format)
+	defer exp.Close()
+
+	htmlBytes, _ := io.ReadAll(r.Body)
+	buf, err := exp.Export(htmlBytes)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", contentType)
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=resume.%v", ext))
+
+	w.Write(buf)
+}
+
+func ResumeCopyHandler(db database.IDatabase) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		idStr := GetCenterID(w, r.URL.Path)
+		rID, err := strconv.Atoi(idStr)
+		if err != nil {
+			http.Error(w, "error occured: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		// get resume
+		res, err := db.GetResume(int64(rID))
+		if err != nil {
+			http.Error(w, "error: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		newRs := res
+		newRs.Title = res.Title + " copy"
+		newRs.Version = res.Version + 1
+		newRes, err := db.CreateResume(newRs)
+		if err != nil {
+			http.Error(w, "error: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		if len(newRs.WorkExperiences) > 0 {
+			newExp := []git.WorkExperience{}
+			for _, v := range newRs.WorkExperiences {
+				exp := v
+				exp.ID = 0
+				newExp = append(newExp, exp)
+			}
+			_, err := db.CreateOrUpdateWorkExperiences(newRes.ID, newExp)
+			if err != nil {
+				http.Error(w, "error: "+err.Error(), http.StatusBadRequest)
+				return
+			}
+		}
+		if len(newRs.Education) > 0 {
+			newEdu := []git.Education{}
+			for _, v := range newRs.Education {
+				edu := v
+				edu.ID = 0
+				newEdu = append(newEdu, edu)
+			}
+			_, err = db.CreateOrUpdateEducation(newRes.ID, newEdu)
+			if err != nil {
+				http.Error(w, "error: "+err.Error(), http.StatusBadRequest)
+				return
+			}
+		}
+		fmt.Println("resume ID: ", newRes.ID)
+		response := Response{
+			Message: "resume duplicated successfully",
+			Status:  http.StatusCreated,
+			Data:    newRes.ID,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(response)
+	}
 }

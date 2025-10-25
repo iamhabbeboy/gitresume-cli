@@ -1,8 +1,10 @@
 package ai
 
+import "log"
+
 type AiModel interface {
 	Generate(message string) (string, error)
-	Chat(messages []string) (string, error)
+	Chat(messages []string) ([]string, error)
 }
 
 type Model string
@@ -14,14 +16,14 @@ const (
 )
 
 func NewChatModel(model Model) AiModel {
-	if model == "" {
-		model = Llama
+	switch model {
+	case Llama:
+		return NewLlama()
+	case OpenAI:
+		return NewOpenAI()
+	default:
+		log.Fatal("invalid model")
 	}
 
-	conf := map[Model]AiModel{
-		Llama:  NewLlama(),
-		OpenAI: NewOpenAI(),
-	}
-
-	return conf[model]
+	return nil
 }
