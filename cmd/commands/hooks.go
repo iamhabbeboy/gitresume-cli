@@ -18,15 +18,6 @@ import (
 )
 
 func SetupHook(db database.IDatabase) error {
-	// homeDir, _ := os.UserHomeDir()
-	// folderPath := filepath.Join(homeDir, "."+util.APP_NAME+"/config.yaml")
-	// _, err := os.Stat(folderPath)
-	// if !os.IsNotExist(err) {
-	// 	return errors.New("config already initialized. use the 'gitresume seed' command to sync your project")
-	// }
-
-	// set default llm config to llama
-
 	if err := db.Migrate(); err != nil {
 		return err
 	}
@@ -105,6 +96,9 @@ func SetupHook(db database.IDatabase) error {
 }
 
 func SeedHook(db database.IDatabase) error {
+	if !IsConfigInitialized() {
+		return errors.New("configuration not initialized. Run 'gitresume init' before seeding.")
+	}
 	project, _ := os.Getwd()
 
 	conf, _ := config.GetProject(project)
@@ -140,6 +134,8 @@ func SeedHook(db database.IDatabase) error {
 	if err = db.Store(prj); err != nil {
 		return err
 	}
+	fmt.Printf("✔ Fetched %v of your commits from %v \n", len(logs), prj.Name)
+	fmt.Printf("✔ Extracted contribution details, tech stack, and frameworks \n\n")
 	return nil
 }
 
@@ -164,4 +160,14 @@ func AiTestHook() error {
 
 	fmt.Println(resp)
 	return nil
+}
+
+func IsConfigInitialized() bool {
+	homeDir, _ := os.UserHomeDir()
+	folderPath := filepath.Join(homeDir, "."+util.APP_NAME+"/config.yaml")
+	_, err := os.Stat(folderPath)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return err == nil
 }

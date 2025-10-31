@@ -1,11 +1,18 @@
-import { Bot, Server, UserRoundPen } from "lucide-react";
+import { Bot, UserRoundPen } from "lucide-react";
 import { Link, Outlet } from "react-router";
 import Layout from "../../components/Layout";
 import { useLocation } from "react-router";
 import { Toaster } from "sonner";
+import { useStore } from "../../store";
+import { useEffect } from "react";
 
 const SettingLayout = () => {
   const location = useLocation();
+  const { fetchAIConfig } = useStore();
+
+  useEffect(() => {
+    fetchAIConfig();
+  }, []);
   return (
     <Layout>
       <section className="w-full">

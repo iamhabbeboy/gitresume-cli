@@ -3,6 +3,7 @@ package server
 import (
 	"embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"io"
@@ -17,7 +18,6 @@ import (
 	"github.com/iamhabbeboy/gitresume/internal/database"
 	"github.com/iamhabbeboy/gitresume/internal/export"
 	"github.com/iamhabbeboy/gitresume/internal/git"
-	"github.com/iamhabbeboy/gitresume/util"
 )
 
 //go:embed web/dist/*
@@ -40,7 +40,12 @@ type Response struct {
 }
 
 type AiRequest struct {
-	Commits []string `json:"commits"`
+	// Commits     []string `json:"commits"`
+	Model       string          `json:"model"`
+	Version     string          `json:"version"`
+	Temperature float32         `json:"temperature"`
+	MaxTokens   int             `json:"max_tokens"`
+	Prompts     []config.Prompt `json:"prompts"`
 }
 
 type AiConfigRequest struct {
@@ -136,18 +141,30 @@ func getAllCommits(db database.IDatabase) (Response, error) {
 
 func AIConfigHandler(db database.IDatabase) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var req config.AiOptions
+		var req config.AiConfigResponse
 		err := json.NewDecoder(r.Body).Decode(&req)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		if err := config.UpdateAIConfig(req); err != nil {
-			log.Println(err.Error())
-			http.Error(w, "Unable to update config", http.StatusInternalServerError)
-			return
+		if len(req.Models) > 0 {
+			if err := config.UpdateAIConfig(req.Models[0]); err != nil {
+				log.Println(err.Error())
+				http.Error(w, "Unable to update config", http.StatusInternalServerError)
+				return
+			}
 		}
+
+		if len(req.CustomPrompt) > 0 {
+			if err = db.CreateOrUpdateLLmPrompt(req.CustomPrompt[0]); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+		}
+
+		fmt.Println(req)
+
 		resp := Response{
 			Message: "success",
 			Status:  http.StatusCreated,
@@ -166,14 +183,25 @@ func GetAIConfigHandler(db database.IDatabase) http.HandlerFunc {
 			return
 		}
 
-		result := []config.AiOptions{}
+		models := []config.AiOptions{}
 		if len(cfg.AiOptions) > 0 {
-			result = cfg.AiOptions
+			models = cfg.AiOptions
 		}
+
+		prmps, _ := db.GetLLmPromptConfig()
+
+		resp := config.AiConfigResponse{
+			Models: models,
+		}
+		prm := []config.CustomPrompt{}
+		if prmps != nil {
+			prm = prmps
+		}
+		resp.CustomPrompt = prm
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(result)
+		json.NewEncoder(w).Encode(resp)
 	}
 }
 
@@ -188,11 +216,25 @@ func AiHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	sys := "You are a professional resume writer specializing in software engineering roles. Transform git commit messages into polished resume bullet points that highlight business value and technical achievements. Use action verbs, past tense, focus on impact, and keep concise (1-2 lines max). Output format: Single bullet point starting with •"
-	msg := fmt.Sprintf(`Transform this commit message into a resume bullet point: %s`, util.ToUserContent(req.Commits))
 
+	// sys := "You are a professional resume writer specializing in software engineering roles. Transform git commit messages into polished resume bullet points that highlight business value and technical achievements. Use action verbs, past tense, focus on impact, and keep concise (1-2 lines max). Output format: Single bullet point starting with •"
+	// msg := fmt.Sprintf(`Transform this commit message into a resume bullet point: %s`, util.ToUserContent(req.Commits))
+
+	if len(req.Prompts) == 0 {
+		http.Error(w, errors.New("prompt is missing").Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var sys, usr string
+	for _, v := range req.Prompts {
+		if v.Role == string(ai.System) {
+			sys = v.Content
+		} else if v.Role == string(ai.User) {
+			usr = v.Content
+		}
+	}
 	ai := ai.NewChatModel(ai.Llama)
-	resp, err := ai.Chat([]string{sys, msg})
+	resp, err := ai.Chat([]string{sys, usr})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusMethodNotAllowed)
 		return

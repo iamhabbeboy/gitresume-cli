@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS commit_summary (
 CREATE INDEX IF NOT EXISTS idx_commit_summary_project_id ON commit_summary(project_id);
 
 
-CREATE TABLE resumes (
+CREATE TABLE IF NOT EXISTS resumes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL, 
     version INTEGER NOT NULL,
@@ -65,7 +65,7 @@ CREATE TABLE resumes (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
-CREATE TABLE work_experiences (
+CREATE TABLE IF NOT EXISTS work_experiences (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     resume_id INTEGER NOT NULL,
     company TEXT,
@@ -80,19 +80,18 @@ CREATE TABLE work_experiences (
 );
 CREATE INDEX idx_work_experiences_resume_id ON work_experiences(resume_id);
 
--- CREATE TABLE work_experience_projects (
---     id INTEGER PRIMARY KEY AUTOINCREMENT,
---     work_experience_id INTEGER NOT NULL,
---     project_id INTEGER NOT NULL,
---     FOREIGN KEY (work_experience_id) REFERENCES work_experiences(id) ON DELETE CASCADE,
---     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
---     UNIQUE(work_experience_id, project_id)
--- );
--- CREATE INDEX idx_work_experience_projects_wid ON work_experience_projects(work_experience_id);
--- CREATE INDEX idx_work_experience_projects_pid ON work_experience_projects(project_id);
+CREATE TABLE IF NOT EXISTS prompts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    temperature REAL DEFAULT 0.7 CHECK (temperature >= 0 AND temperature <= 2),
+    max_tokens INTEGER DEFAULT 1024 CHECK (max_tokens > 0),
+    content TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 
 
-CREATE TABLE educations (
+CREATE TABLE IF NOT EXISTS educations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     resume_id INTEGER NOT NULL,
     school TEXT,

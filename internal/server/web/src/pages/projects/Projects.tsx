@@ -4,6 +4,7 @@ import Layout from "../../components/Layout";
 import Contribution from "../../components/project/Contribution";
 import ProjectList from "../../components/project/ProjectList";
 import type { Prop } from "./type";
+import { Toaster } from "sonner";
 
 function Projects() {
   const store = useStore();
@@ -11,15 +12,14 @@ function Projects() {
 
   useEffect(() => {
     store.fetchProjects();
+    store.fetchAIConfig();
     // eslint-disable-next-line
   }, []);
 
   return (
     <Layout>
       <div className="w-3/12 border-r border-gray-300">
-        <h3 className="text-lg border-b border-gray-300 font-bold">
-          Projects
-        </h3>
+        <h3 className="text-lg border-b border-gray-300 font-bold">Projects</h3>
         <ProjectList
           selectedProject={selectedProject}
           projects={store.projects}
@@ -29,6 +29,7 @@ function Projects() {
       <div className="p-3 w-full">
         <Contribution selectedProject={selectedProject} />
       </div>
+      <Toaster />
     </Layout>
   );
 }

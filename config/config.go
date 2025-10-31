@@ -31,6 +31,27 @@ type AiOptions struct {
 	ApiKey    string `mapstructure:"api_key" yaml:"api_key" json:"api_key"`
 	Model     string `mapstructure:"model" yaml:"model" json:"model"`
 	IsDefault bool   `mapstructure:"is_default" yaml:"is_default" json:"is_default"`
+
+	// CustomPrompt CustomPrompt `json:"custom_prompt,-"`
+}
+
+type AiConfigResponse struct {
+	Models       []AiOptions    `json:"models"`
+	CustomPrompt []CustomPrompt `json:"custom_prompt"`
+}
+
+type CustomPrompt struct {
+	ID          int      `json:"id,omitempty"`
+	Title       string   `json:"title,omitempty"`
+	Model       string   `json:"model"`
+	Temperature float32  `json:"temperature"`
+	MaxTokens   int      `json:"max_tokens"`
+	Prompts     []Prompt `json:"prompts,omitempty"`
+}
+
+type Prompt struct {
+	Content string `json:"content"`
+	Role    string `json:"role"`
 }
 
 var config AppConfig

@@ -15,6 +15,14 @@ const Resume: React.FC = () => {
 
   const reverse = resumes || [].reverse();
 
+  const getSkillFormat = (skills: string[]): string => {
+    if (skills.length === 0) return "";
+    if (skills.length > 6) {
+      return skills.splice(0, 6).join(", ") + " ...";
+    }
+    return skills.join(", ");
+  };
+
   const table: TableProps = {
     data: [
       {
@@ -27,7 +35,7 @@ const Resume: React.FC = () => {
       {
         name: "Stack",
         values: reverse.map((res) => ({
-          value: res.skills ? res.skills.join(", ") : "",
+          value: getSkillFormat(res.skills ?? []),
         })),
       },
       {
@@ -46,7 +54,9 @@ const Resume: React.FC = () => {
   };
   return (
     <div className="relative overflow-x-auto sm:rounded-lg">
-      {reverse.length > 0 ? <Table data={table.data} /> : (
+      {reverse.length > 0 ? (
+        <Table data={table.data} />
+      ) : (
         <>
           <h1 className="text-2xl text-gray-400">No resume available</h1>
         </>

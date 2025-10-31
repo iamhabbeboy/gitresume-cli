@@ -1,6 +1,7 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import type { Technology } from "../src/pages/projects/type";
+import type { CustomPrompt, Prompt } from "../src/types/ai-config";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -87,3 +88,17 @@ export const transformTech = (value: string) => {
 
   return Array.from(new Set([...stack, ...framework]));
 };
+
+/**
+ * Replaces placeholders (e.g., %content%) in AI request templates
+ * @param messages - array of AI body templates
+ * @param variables - object containing key-value pairs for replacements
+ * @returns updated array with placeholders replaced
+ */
+export function buildAIBody(messages: Prompt[], items: string[]): Prompt[] {
+  const combined = items.join("\n- ");
+  return messages.map((msg) => ({
+    ...msg,
+    content: msg.content.replace("%content%", combined),
+  }));
+}

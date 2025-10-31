@@ -13,6 +13,7 @@ import (
 
 	"path/filepath"
 
+	"github.com/iamhabbeboy/gitresume/config"
 	"github.com/iamhabbeboy/gitresume/internal/git"
 	"github.com/iamhabbeboy/gitresume/util"
 
@@ -182,13 +183,13 @@ func (s *sqliteDB) UpsertCommit(commits []git.CustomUpdateCommit) error {
 				VALUES (?, NULL, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 			`, v.ProjectID, v.GitCommit.Msg)
 			if err != nil {
-				fmt.Printf("Failed with: %v", err)
+				log.Printf("Failed with: %v", err)
 			}
 		} else {
 			commitID = sql.NullInt64{Int64: int64(v.ID), Valid: true}
 			rows, err = stmt.Exec(v.ProjectID, commitID, v.Msg)
 			if err != nil {
-				fmt.Printf("Failed with: %v", err)
+				log.Printf("Failed with: %v", err)
 			}
 		}
 
@@ -198,9 +199,9 @@ func (s *sqliteDB) UpsertCommit(commits []git.CustomUpdateCommit) error {
 			log.Printf("Failed to execute queries : %v", err)
 		}
 		if rowsAffected == 0 {
-			fmt.Printf("⚠️ Record with id=%d does not exist, skipping update\n", v.ID)
+			log.Printf("⚠️ Record with id=%d does not exist, skipping update\n", v.ID)
 		} else {
-			fmt.Printf("✅ Updated record id=%d\n", v.ID)
+			log.Printf("✅ Updated record id=%d\n", v.ID)
 		}
 	}
 
@@ -504,7 +505,6 @@ func (c *sqliteDB) CreateOrUpdateWorkExperiences(rID int64, w []git.WorkExperien
 
 	var lastID int64
 	ids := make([]int64, 0, len(w))
-	var errs []error
 
 	for _, wk := range w {
 		var exists bool
@@ -512,7 +512,7 @@ func (c *sqliteDB) CreateOrUpdateWorkExperiences(rID int64, w []git.WorkExperien
 		err = tx.QueryRow(q, wk.ID, rID).Scan(&exists)
 
 		if err != nil {
-			errs = append(errs, fmt.Errorf("check exists id=%d: %w", wk.ID, err))
+			log.Printf("check exists id=%d: %v", wk.ID, err)
 			continue
 		}
 
@@ -522,7 +522,7 @@ func (c *sqliteDB) CreateOrUpdateWorkExperiences(rID int64, w []git.WorkExperien
 
 			if err != nil {
 				tx.Rollback()
-				errs = append(errs, fmt.Errorf("error saving id=%d: %w", wk.ID, err))
+				log.Printf("error saving id=%d: %v", wk.ID, err)
 				continue
 			}
 
@@ -531,7 +531,7 @@ func (c *sqliteDB) CreateOrUpdateWorkExperiences(rID int64, w []git.WorkExperien
 
 			if err != nil {
 				tx.Rollback()
-				errs = append(errs, fmt.Errorf("error getting the lastID id=%d: %w", wk.ID, err))
+				log.Printf("error getting the lastID id=%d: %v", wk.ID, err)
 				continue
 			}
 
@@ -542,7 +542,7 @@ func (c *sqliteDB) CreateOrUpdateWorkExperiences(rID int64, w []git.WorkExperien
 
 			if err != nil {
 				tx.Rollback()
-				errs = append(errs, fmt.Errorf("error inserting id=%d: %w", wk.ID, err))
+				log.Printf("error inserting id=%d: %v", wk.ID, err)
 				continue
 			}
 
@@ -555,8 +555,6 @@ func (c *sqliteDB) CreateOrUpdateWorkExperiences(rID int64, w []git.WorkExperien
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
-
-	fmt.Println(errs)
 
 	return ids, nil
 }
@@ -782,6 +780,78 @@ func (s *sqliteDB) CreateOrUpdateEducation(rID int64, edus []git.Education) ([]i
 		return nil, err
 	}
 	return ids, nil
+}
+
+func (s *sqliteDB) CreateOrUpdateLLmPrompt(cfg config.CustomPrompt) error {
+	if len(cfg.Prompts) == 0 {
+		return fmt.Errorf("prompt cannot be empty")
+	}
+
+	var exists bool
+
+	q := `SELECT EXISTS(SELECT 1 FROM prompts WHERE title=?)`
+	err := s.conn.QueryRow(q, cfg.Title).Scan(&exists)
+	if err != nil {
+		return err
+	}
+
+	prmpts, _ := json.Marshal(cfg.Prompts)
+
+	if exists {
+		q := `UPDATE prompts SET temperature=?, max_tokens=?, content=? WHERE title=?`
+		stmt, err := s.conn.Prepare(q)
+		if err != nil {
+			return err
+		}
+		_, err = stmt.Exec(cfg.Temperature, cfg.MaxTokens, string(prmpts), cfg.Title)
+		if err != nil {
+			return err
+		}
+	} else {
+		q := `INSERT INTO prompts (title, temperature, max_tokens, content) VALUES(?, ?, ?, ?)`
+		smt, err := s.conn.Prepare(q)
+		if err != nil {
+			return err
+		}
+		_, err = smt.Exec(cfg.Title, cfg.Temperature, cfg.MaxTokens, string(prmpts))
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *sqliteDB) GetLLmPromptConfig() ([]config.CustomPrompt, error) {
+	rows, err := s.conn.Query("SELECT title, temperature, max_tokens, content FROM prompts")
+
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("no record found")
+	}
+	defer rows.Close()
+
+	var prompts []config.CustomPrompt
+	for rows.Next() {
+		var (
+			title   string
+			temp    float32
+			maxTok  int
+			content string
+		)
+		if err := rows.Scan(&title, &temp, &maxTok, &content); err != nil {
+			return nil, err
+		}
+		var prompt []config.Prompt
+		_ = json.Unmarshal([]byte(content), &prompt)
+		prompts = append(prompts, config.CustomPrompt{
+			Title:       title,
+			Temperature: temp,
+			MaxTokens:   maxTok,
+			Prompts:     prompt,
+		})
+	}
+
+	return prompts, nil
 }
 
 func (s *sqliteDB) Delete(key string) error {

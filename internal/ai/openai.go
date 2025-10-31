@@ -2,21 +2,24 @@ package ai
 
 import (
 	"context"
-	"errors"
+	"fmt"
 
 	"github.com/openai/openai-go/v3"
-	"github.com/openai/openai-go/v3/option"
+	// "github.com/openai/openai-go/option"
 )
 
 type OpenAIConfig struct {
-	client openai.Client
+	client   *openai.Client
+	messages []openai.ChatCompletionMessageParamUnion
+	model    openai.ChatModel
 }
 
 func NewOpenAI() *OpenAIConfig {
-	client := openai.NewClient(
-		option.WithAPIKey("My API Key"),
-	)
-	return &OpenAIConfig{client: client}
+	client := openai.NewClient()
+	return &OpenAIConfig{
+		client:   &client,
+		messages: make([]openai.ChatCompletionMessageParamUnion, 0),
+	}
 }
 
 func (o *OpenAIConfig) Generate(message string) (string, error) {
@@ -24,34 +27,36 @@ func (o *OpenAIConfig) Generate(message string) (string, error) {
 }
 
 func (o *OpenAIConfig) Chat(messages []string) ([]string, error) {
-	// chatCompletion, err := o.client.Chat.Completions.New(context.TODO(), openai.ChatCompletionNewParams{
-	// 	Messages: []openai.ChatCompletionMessageParamUnion{
-	// 		openai.UserMessage("Say this is a test"),
-	// 	},
-	// 	Model: openai.ChatModelGPT4o,
-	// })
+	ctx := context.Background()
 
-	cfg := openai.ChatCompletionNewParams{
-		Model: openai.ChatModelGPT4o,
-		Messages: []openai.ChatCompletionMessageParamUnion{
-			openai.UserMessage("Say this is a test"),
-		},
-		ResponseFormat: openai.ChatCompletionNewParamsResponseFormatUnion{},
+	payload := []openai.ChatCompletionMessageParamUnion{
+		openai.SystemMessage(""),
+		openai.UserMessage("content"),
+		openai.AssistantMessage("content"),
 	}
-	chatCompletion, err := o.client.Chat.Completions.New(context.TODO(), cfg)
+
+	completion, err := o.client.Chat.Completions.New(ctx, openai.ChatCompletionNewParams{
+		Messages: payload,
+		Model:    openai.ChatModelGPT3_5Turbo,
+		// Temperature: param.Opt[float64]{Value: 0},
+		// TopP:        0,
+	})
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get completion: %w", err)
 	}
 
-	if len(chatCompletion.Choices) == 0 {
-		return nil, errors.New("no data generated: output is empty")
+	if len(completion.Choices) == 0 {
+		return nil, fmt.Errorf("no choices returned")
 	}
 
-	var output []string
-	for _, v := range chatCompletion.Choices {
-		output = append(output, v.Message.Content)
-	}
+	responseContent := completion.Choices[0].Message.Content
 
-	return output, nil
+	fmt.Println(responseContent)
+	// var output []string
+	// for _, v := range chatCompletion.Choices {
+	// 	output = append(output, v.Message.Content)
+	// }
+
+	return nil, nil
 }

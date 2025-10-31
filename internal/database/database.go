@@ -3,6 +3,7 @@ package database
 import (
 	"sync"
 
+	"github.com/iamhabbeboy/gitresume/config"
 	"github.com/iamhabbeboy/gitresume/internal/database/drivers"
 	"github.com/iamhabbeboy/gitresume/internal/git"
 )
@@ -37,6 +38,9 @@ type IDatabase interface {
 
 	DeleteWorkExperience(wID int64) error
 	CreateOrUpdateWorkExperiences(rID int64, w []git.WorkExperience) ([]int64, error)
+
+	CreateOrUpdateLLmPrompt(cfg config.CustomPrompt) error
+	GetLLmPromptConfig() ([]config.CustomPrompt, error)
 }
 
 type DBName string

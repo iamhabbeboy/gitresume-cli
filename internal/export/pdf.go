@@ -44,7 +44,7 @@ func (p *IPDFExporter) Export(content []byte) ([]byte, error) {
 	chromedp.ListenTarget(ctx, func(ev interface{}) {
 		switch e := ev.(type) {
 		case *page.EventJavascriptDialogOpening:
-			log.Println("⚠️ js Dialog: %s", e.Message)
+			log.Printf("⚠️ js Dialog: %s", e.Message)
 		}
 	})
 

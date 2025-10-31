@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/fatih/color"
 	"github.com/iamhabbeboy/gitresume/cmd/commands"
 	"github.com/iamhabbeboy/gitresume/config"
 	"github.com/iamhabbeboy/gitresume/internal/database"
@@ -29,6 +30,8 @@ var (
 	model  string
 	db     database.IDatabase
 )
+
+var errColor = color.New(color.FgRed).SprintFunc()
 
 var rootCmd = &cobra.Command{
 	Use:   "gitresume",
@@ -68,7 +71,7 @@ var initCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		err := commands.SetupHook(db)
 		if err != nil {
-			fmt.Println("🚫 Error:", err)
+			fmt.Println(errColor("🚫 Error:" + err.Error()))
 		}
 	},
 }
@@ -79,12 +82,10 @@ var seedCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		err := commands.SeedHook(db)
 		if err != nil {
-			fmt.Println("🚫 Failed to add project:", err)
+			fmt.Println(errColor("🚫 Failed to add project:", err))
 		} else {
 			fmt.Println("🎉 Successfully seeded")
 		}
-		// report := storage.GenerateWeeklyReport()
-		// fmt.Println("\n--- Weekly Report ---\n", report)
 	},
 }
 
@@ -106,7 +107,7 @@ var aiConfigCmd = &cobra.Command{
 	Short: "Configure AI provider credentials",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if aiName == "" || apiKey == "" || model == "" {
-			return fmt.Errorf("--name, --api-key, and --model are required")
+			return fmt.Errorf(errColor("--name, --api-key, and --model are required"))
 		}
 		cfg := config.AiOptions{
 			Name:      strings.ToLower(aiName),
@@ -115,7 +116,7 @@ var aiConfigCmd = &cobra.Command{
 			IsDefault: true,
 		}
 		if err := config.UpdateAIConfig(cfg); err != nil {
-			return fmt.Errorf("🚫 Unable to update config")
+			return fmt.Errorf(errColor("🚫 Unable to update config"))
 		}
 		fmt.Printf("🎉 AI provider '%s' configured successfully \n", aiName)
 		return nil
@@ -126,18 +127,12 @@ var aiCmd = &cobra.Command{
 	Use:   "ai",
 	Short: "AI integration",
 	Run: func(cmd *cobra.Command, args []string) {
-		cfg, err := config.LoadConfig()
+		err := commands.AiTestHook()
 		if err != nil {
-			fmt.Println(err)
-			return
+			fmt.Println(errColor("Failed to start dashboard server:", err))
+		} else {
+			fmt.Println("🚀 Done!")
 		}
-		fmt.Println(cfg)
-		// err := commands.AiTestHook()
-		// if err != nil {
-		// 	fmt.Println("Failed to start dashboard server:", err)
-		// } else {
-		// 	fmt.Println("🚀 Done!")
-		// }
 	},
 }
 

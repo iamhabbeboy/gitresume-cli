@@ -15,3 +15,8 @@ export type Project = {
 export type CustomCommitMessage = CommitMessage & {
   project_id: number;
 };
+
+export const AIAvailableOptions = {
+  ProjectCommitMessages: "project",
+  SummarizeWorkExperience: "summary",
+};

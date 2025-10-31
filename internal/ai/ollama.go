@@ -28,14 +28,6 @@ type Response struct {
 	Response string `json:"response"`
 }
 
-type Role string
-
-const (
-	User      Role = "user"
-	System    Role = "system"
-	Assistant Role = "assistant"
-)
-
 type ChatRequest struct {
 	Model    string        `json:"model"`
 	Messages []ChatMessage `json:"messages"`

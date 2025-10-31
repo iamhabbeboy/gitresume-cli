@@ -8,6 +8,7 @@ import type {
 import axios from "axios";
 import { baseUri, defaultTitle } from "../util/config";
 import { persist } from "zustand/middleware";
+import type { CustomPrompt } from "../types/ai-config";
 
 interface ResumeState {
   resume: Resume;
@@ -40,7 +41,7 @@ interface ResumeState {
   deleteResume: (id: number) => void;
   updateLinks: (links: string[]) => void;
   summarizeResponsibility: (
-    data: string[]
+    data: CustomPrompt
   ) => Promise<{ success: boolean; data: string[]; error: null | string }>;
 }
 
@@ -424,7 +425,7 @@ export const useResumeStore = create<ResumeState>()(
         }));
       },
       summarizeResponsibility: async (
-        commits: string[]
+        prompt: CustomPrompt
       ): Promise<{
         success: boolean;
         data: string[];
@@ -433,7 +434,7 @@ export const useResumeStore = create<ResumeState>()(
         try {
           set((state) => ({ ...state, loading: true }));
           const { data } = await axios.post(`${baseUri}/api/ai`, {
-            commits,
+            ...prompt,
           });
           return { success: true, data, error: null };
         } catch (e) {

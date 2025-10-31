@@ -6,10 +6,12 @@ import type {
   Project,
 } from "../types/project";
 import { baseUri } from "../util/config";
+import type { AIConfig, CustomPrompt } from "../types/ai-config";
 
 type ProjectStore = {
   projects: Project[];
   commits: CommitMessage[];
+  ai_config: AIConfig;
   loading: boolean;
   error: string | null;
 };
@@ -21,21 +23,26 @@ type Action = {
   updateCommitsWithAI: (projectID: number, commits: CommitMessage[]) => void;
   updateAllCommitsWithAI: (
     projtID: number,
-    commits: string[],
+    prompts: CustomPrompt
   ) => Promise<{ success: boolean; data: CommitMessage[]; error?: string }>;
   fetchCommitSummary: (projectId: number) => Promise<CommitMessage[]>;
+  fetchAIConfig: () => Promise<AIConfig>;
 };
 
 export const useStore = create<ProjectStore & Action>()((set, get) => ({
   projects: [],
   commits: [],
+  ai_config: {
+    custom_prompt: [],
+    models: [],
+  },
   loading: false,
   error: "",
   fetchProjects: async () => {
     set({ loading: true, error: null, projects: [] });
     try {
       const res = await axios.get<{ data: Project[] }>(
-        `${baseUri}/api/projects`,
+        `${baseUri}/api/projects`
       );
       set({ projects: res.data.data, loading: false });
     } catch (err) {
@@ -44,6 +51,11 @@ export const useStore = create<ProjectStore & Action>()((set, get) => ({
         loading: false,
       });
     }
+  },
+  fetchAIConfig: async () => {
+    const resp = await axios.get(`${baseUri}/api/config`);
+    set((state) => ({ ...state, ai_config: resp.data }));
+    return resp.data;
   },
   fetchCommitSummary: async (projectId: number): Promise<CommitMessage[]> => {
     try {
@@ -56,11 +68,11 @@ export const useStore = create<ProjectStore & Action>()((set, get) => ({
       return [];
     }
   },
-  updateAllCommitsWithAI: async (projectID: number, commits: string[]) => {
+  updateAllCommitsWithAI: async (projectID: number, prompt: CustomPrompt) => {
     try {
       set((state) => ({ ...state, loading: true }));
       const { data } = await axios.post(`${baseUri}/api/ai`, {
-        commits,
+        ...prompt,
       });
 
       const payload = data.map((c: string) => ({
@@ -103,38 +115,36 @@ export const useStore = create<ProjectStore & Action>()((set, get) => ({
       projects: state.projects.map((p) =>
         p.name === projectName
           ? {
-            ...p,
-            commits: commits,
-          }
+              ...p,
+              commits: commits,
+            }
           : p
       ),
     }));
   },
   bulkUpdateCommit: async (
     projectID: number,
-    payload: CustomCommitMessage[],
+    payload: CustomCommitMessage[]
   ) => {
     try {
       await axios.put(`${baseUri}/api/commits/bulk-update`, {
         data: payload,
       });
 
-      const commitMap = new Map(
-        payload.map((c) => [c.commit_id, c.message]),
-      );
+      const commitMap = new Map(payload.map((c) => [c.commit_id, c.message]));
 
       set((state) => ({
         loading: false,
         projects: state.projects.map((p) =>
           Number(p.id) === projectID
             ? {
-              ...p,
-              commits: p.commits.map((c) =>
-                commitMap.has(c.commit_id)
-                  ? { ...c, ai_generated_msg: commitMap.get(c.commit_id) }
-                  : c
-              ),
-            }
+                ...p,
+                commits: p.commits.map((c) =>
+                  commitMap.has(c.commit_id)
+                    ? { ...c, ai_generated_msg: commitMap.get(c.commit_id) }
+                    : c
+                ),
+              }
             : p
         ),
       }));

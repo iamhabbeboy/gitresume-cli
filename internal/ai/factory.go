@@ -15,6 +15,14 @@ const (
 	Llama       Model = "llama"
 )
 
+type Role string
+
+const (
+	User      Role = "user"
+	System    Role = "system"
+	Assistant Role = "assistant"
+)
+
 func NewChatModel(model Model) AiModel {
 	switch model {
 	case Llama:

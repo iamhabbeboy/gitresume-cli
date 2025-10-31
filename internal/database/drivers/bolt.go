@@ -10,6 +10,7 @@ import (
 	"os"
 
 	"github.com/google/uuid"
+	"github.com/iamhabbeboy/gitresume/config"
 	"github.com/iamhabbeboy/gitresume/internal/git"
 	"github.com/iamhabbeboy/gitresume/util"
 	bolt "go.etcd.io/bbolt"
@@ -216,4 +217,12 @@ func (d *Db) GetAll() (error, []KV) {
 		return err, nil
 	}
 	return nil, result
+}
+
+func (d *Db) CreateOrUpdateLLmPrompt(cfg config.CustomPrompt) error {
+	return nil
+}
+
+func (d *Db) GetLLmPromptConfig() ([]config.CustomPrompt, error) {
+	return nil, nil
 }

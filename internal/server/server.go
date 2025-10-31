@@ -30,7 +30,7 @@ func Serve(db database.IDatabase) {
 
 	mux.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.FS(assetsFS))))
 	mux.Handle("/favicon.ico", http.FileServer(http.FS(dist)))
-	mux.Handle("/vite.svg", http.FileServer(http.FS(dist)))
+	// mux.Handle("/vite.svg", http.FileServer(http.FS(dist)))
 	mux.Handle("/manifest.json", http.FileServer(http.FS(dist)))
 	mux.Handle("/loading.svg", http.FileServer(http.FS(dist)))
 
@@ -122,7 +122,8 @@ func Serve(db database.IDatabase) {
 		Handler: handler,
 	}
 
-	log.Printf("🚀 Server started on http://localhost:%d\n", startPort)
+	fmt.Printf("🚀 Starting dashboard on http://localhost:%d\n", startPort)
+	fmt.Println("✨ Build your resume visually...")
 
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("Server error: %v \n", err)
