@@ -1,17 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
 import { useStore } from "../../store";
 import ReactMarkdown from "react-markdown";
-import type { CommitMessage } from "../../types/project";
-import type { Prop, Technology } from "../../pages/projects/type";
-import { Bot, BriefcaseBusiness } from "lucide-react";
+import { AIAvailableOptions, type CommitMessage } from "../../types/project";
+import type { Prop } from "../../pages/projects/type";
+import { Bot, BriefcaseBusiness, Info } from "lucide-react";
 import { t } from "../../util/config";
 import { Button } from "../ui/Button";
 import Spinner from "../Spinner";
-import { transformTech } from "../../../lib/utils";
+import { buildAIBody, transformTech } from "../../../lib/utils";
+import type { CustomPrompt } from "../../types/ai-config";
 
-const Contribution: React.FC<{ selectedProject: Prop | null }> = (
-  { selectedProject },
-) => {
+const Contribution: React.FC<{ selectedProject: Prop | null }> = ({
+  selectedProject,
+}) => {
   const store = useStore();
   const [index, setIndex] = useState<number | null>(null);
   const [tab, setTab] = useState(0);
@@ -19,19 +20,22 @@ const Contribution: React.FC<{ selectedProject: Prop | null }> = (
   const [commits, setCommits] = useState<CommitMessage[]>([]);
   const [isAIAction, setIsAIAction] = useState(false);
 
-  const handleFetchCommits = useCallback((index: number = 0) => {
-    setTab(index);
-    let result = [];
-    const filter = store.projects?.find((p) =>
-      Number(p.id) === selectedProject?.id
-    );
-    result = filter?.commits || [];
-    if (index === 1) {
-      const translatedCommits = store.commits;
-      result = translatedCommits;
-    }
-    setCommits(result);
-  }, [selectedProject?.id, store.commits, store.projects]);
+  const handleFetchCommits = useCallback(
+    (index: number = 0) => {
+      setTab(index);
+      let result = [];
+      const filter = store.projects?.find(
+        (p) => Number(p.id) === selectedProject?.id
+      );
+      result = filter?.commits || [];
+      if (index === 1) {
+        const translatedCommits = store.commits;
+        result = translatedCommits;
+      }
+      setCommits(result);
+    },
+    [selectedProject?.id, store.commits, store.projects]
+  );
 
   useEffect(() => {
     if (!isAIAction) {
@@ -40,24 +44,64 @@ const Contribution: React.FC<{ selectedProject: Prop | null }> = (
   }, [handleFetchCommits, isAIAction]);
 
   const handleImproveAllWithAI = async () => {
+    const aiPromptConfig = store.ai_config;
+    const customPrompt = aiPromptConfig.custom_prompt;
+    const defaultModel = aiPromptConfig.models.find(
+      (prmpt) => prmpt.is_default
+    );
+
+    if (!defaultModel && customPrompt.length === 0) {
+      return t({
+        message:
+          "Error occured: It looks like your AI configuration hasn’t been set yet",
+        icon: <Info />,
+      });
+    }
+
     const messages = commits.map((c) => c.message);
     if (messages.length === 0) {
-      return t(
-        "An error occurred, you have an empty commit messages",
-        "warning",
-      );
+      return t({
+        message: "An error occurred, you have an empty commit messages",
+        icon: <Info />,
+      });
     }
+
+    const promptAvailable = customPrompt.find(
+      (cp) => cp.title === AIAvailableOptions.ProjectCommitMessages
+    );
+    if (!promptAvailable) {
+      return t({
+        message:
+          "Error occured: The prompt for the commit message is not found",
+        icon: <Info />,
+      });
+    }
+    const prompt = promptAvailable?.prompts;
+    const transformer = buildAIBody(prompt, messages);
+
+    const body: CustomPrompt = {
+      temperature: promptAvailable.temperature,
+      max_tokens: promptAvailable.max_tokens,
+      model: defaultModel?.name,
+      version: defaultModel?.model,
+      prompts: transformer,
+      title: "",
+    };
+    console.log(body);
 
     const response = await store.updateAllCommitsWithAI(
       selectedProject?.id as number,
-      messages,
+      body
     );
-
     console.log(response);
 
-    if (!response.success) {
+    if (response.error) {
       const error = response.error;
-      return t(`error occured: ${error}`, "warning");
+      const llmError = error.includes("Request failed with status code 405");
+      return t({
+        message: `An error occured: ${error}. ${llmError ? " Your LLM service is most likely not responding" : ""}`,
+        icon: <Info />,
+      });
     }
     setTab(1);
     setCommits([]);
@@ -77,10 +121,7 @@ const Contribution: React.FC<{ selectedProject: Prop | null }> = (
         <div className="flex h-30 items-center h-40 justify-center text-center">
           <div className="">
             <div className="flex justify-center">
-              <BriefcaseBusiness
-                size={60}
-                className="text-gray-400"
-              />
+              <BriefcaseBusiness size={60} className="text-gray-400" />
             </div>
             <h1 className="text-2xl text-gray-400">
               {store.projects?.length > 0
@@ -113,8 +154,8 @@ const Contribution: React.FC<{ selectedProject: Prop | null }> = (
                 disabled={store.loading}
                 onClick={() => handleImproveAllWithAI()}
               >
-                {store.loading ? <Spinner /> : <Bot size={30} />}{" "}
-                Summarize with AI
+                {store.loading ? <Spinner /> : <Bot size={30} />} Summarize with
+                AI
               </Button>
             </div>
           </div>
@@ -168,8 +209,7 @@ const Contribution: React.FC<{ selectedProject: Prop | null }> = (
                     <div className="w-10/12">
                       <ReactMarkdown>{commit.message}</ReactMarkdown>
                     </div>
-                    {
-                      /* {index === commit.commit_id && (
+                    {/* {index === commit.commit_id && (
                       <div className="w-2/12 flex items-center justify-end">
                         <button
                           className="bg-blue-500 text-white px-5 py-1 rounded-lg text-xs hover:bg-blue-800"
@@ -183,11 +223,9 @@ const Contribution: React.FC<{ selectedProject: Prop | null }> = (
                           use AI
                         </button>
                       </div>
-                    )} */
-                    }
+                    )} */}
                   </div>
-                  {
-                    /* <div
+                  {/* <div
                     className={`text-gray-500 ${
                       index === commit.commit_id ? "block" : "hidden"
                     }`}
@@ -201,8 +239,7 @@ const Contribution: React.FC<{ selectedProject: Prop | null }> = (
                       <span className="font-bold">AI response:</span>{" "}
                       <p>{commit.ai_generated_msg}</p>
                     </div>
-                  </div> */
-                  }
+                  </div> */}
                 </li>
               ))}
           </ul>

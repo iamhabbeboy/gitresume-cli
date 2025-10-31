@@ -6,11 +6,13 @@ import { useEffect } from "react";
 import { t } from "../../util/config";
 import { Toaster } from "sonner";
 import { Info } from "lucide-react";
+import { useStore } from "../../store";
 
 const ResumeLayout = () => {
   const location = useLocation();
   const router = useNavigate();
   const { id } = useParams();
+  const { fetchAIConfig } = useStore();
 
   const store = useResumeStore();
   const isListing = location.pathname === "/resumes";
@@ -27,6 +29,7 @@ const ResumeLayout = () => {
   };
 
   useEffect(() => {
+    fetchAIConfig();
     if (id) {
       (async () => {
         const resp = await store.fetchResumeById(Number(id));
