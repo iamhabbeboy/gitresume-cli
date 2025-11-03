@@ -90,6 +90,32 @@ CREATE TABLE IF NOT EXISTS prompts (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS volunteering (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    resume_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    link TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (resume_id) REFERENCES resumes(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_volunteering_resume_id ON volunteering(resume_id);
+
+
+CREATE TABLE IF NOT EXISTS project_worked_on (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    resume_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    technologies TEXT,
+    link TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (resume_id) REFERENCES resumes(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_project_worked_on_resume_id ON project_worked_on(resume_id);
+
 
 CREATE TABLE IF NOT EXISTS educations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
