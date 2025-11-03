@@ -2,7 +2,7 @@
 
 import { Card } from "../../ui/Card";
 import { Link, Mail, MapPin, Phone } from "lucide-react";
-import type { ReOrder, Resume } from "../type";
+import { OrderLabel, type Resume } from "../type";
 import { stripProtocol } from "../../../util/config";
 
 interface ResumePreviewProps {
@@ -22,9 +22,7 @@ export default function ResumePreview({ data, order }: ResumePreviewProps) {
 
   const experience = (data.work_experiences || []).length > 0 && (
     <div>
-      <h2 className="text-lg font-semibold text-primary mb-3">
-        Experience
-      </h2>
+      <h2 className="text-lg font-semibold text-primary mb-3">Experience</h2>
       <div className="space-y-4">
         {data.work_experiences.map((exp) => (
           <div key={exp.id}>
@@ -59,9 +57,7 @@ export default function ResumePreview({ data, order }: ResumePreviewProps) {
 
   const education = data.education.length > 0 && (
     <div>
-      <h2 className="text-lg font-semibold text-primary mb-3">
-        Education
-      </h2>
+      <h2 className="text-lg font-semibold text-primary mb-3">Education</h2>
       <div className="space-y-3">
         {data.education.map((edu, i) => (
           <div key={i}>
@@ -87,9 +83,7 @@ export default function ResumePreview({ data, order }: ResumePreviewProps) {
 
   const skills = data.skills.length > 0 && (
     <div>
-      <h2 className="text-lg font-semibold text-primary mb-3">
-        Skills
-      </h2>
+      <h2 className="text-lg font-semibold text-primary mb-3">Skills</h2>
       <div className="flex flex-wrap gap-2">
         {data.skills.map((skill, index) => (
           <span
@@ -103,18 +97,82 @@ export default function ResumePreview({ data, order }: ResumePreviewProps) {
     </div>
   );
 
+  const projects = data.project_worked_on?.length > 0 && (
+    <div>
+      <h2 className="text-lg font-semibold text-primary mb-3">Projects</h2>
+      <div className="space-y-3">
+        {data.project_worked_on.map((prj, i) => (
+          <div key={i}>
+            <div className="flex justify-between items-start">
+              <div>
+                <h3 className="font-semibold text-foreground">
+                  {prj.technologies || "Title"}{" "}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {prj.description || "Description"}
+                </p>
+                <span className="text-sm text-muted-foreground whitespace-nowrap">
+                  <a
+                    href={prj.link}
+                    className="underline hover:no-underline"
+                    target="_blank"
+                  >
+                    {prj.link}
+                  </a>
+                </span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const volunteering = data.volunteers?.length > 0 && (
+    <div>
+      <h2 className="text-lg font-semibold text-primary mb-3">Volunteering</h2>
+      <div className="space-y-3">
+        {data.volunteers.map((vol, i) => (
+          <div key={i}>
+            <div className="flex justify-between items-start">
+              <div>
+                <h3 className="font-semibold text-foreground">
+                  {vol.title || "Title"}{" "}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {vol.description || "Description"}
+                </p>
+              </div>
+              <span className="text-sm text-muted-foreground whitespace-nowrap">
+                {vol.link}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
   const sectionOrder: ReOrder[] = [
     {
-      label: "experience",
+      label: OrderLabel.WorkExperience,
       component: experience,
     },
     {
-      label: "education",
+      label: OrderLabel.Education,
       component: education,
     },
     {
-      label: "skills",
+      label: OrderLabel.Skills,
       component: skills,
+    },
+    {
+      label: OrderLabel.Projects,
+      component: projects,
+    },
+    {
+      label: OrderLabel.Volunteer,
+      component: volunteering,
     },
   ];
 
@@ -158,7 +216,9 @@ export default function ResumePreview({ data, order }: ResumePreviewProps) {
               <div className="flex items-center gap-1" key={key}>
                 <Link className="h-4 w-4" />
                 <span>
-                  <a target="_blank" href={link}>{stripProtocol(link)}</a>
+                  <a target="_blank" href={link}>
+                    {stripProtocol(link)}
+                  </a>
                 </span>
               </div>
             ))}
@@ -188,8 +248,7 @@ export default function ResumePreview({ data, order }: ResumePreviewProps) {
         {/* Skills */}
 
         {/* Empty State */}
-        {
-          /* {!data.personalInfo.fullName &&
+        {/* {!data.personalInfo.fullName &&
           data.experience.length === 0 &&
           data.education.length === 0 &&
           data.skills.length === 0 && (
@@ -198,8 +257,7 @@ export default function ResumePreview({ data, order }: ResumePreviewProps) {
               Start filling out the form to see your resume preview
             </p>
           </div>
-        )}*/
-        }
+        )}*/}
       </div>
     </Card>
   );

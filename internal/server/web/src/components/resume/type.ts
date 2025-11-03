@@ -24,6 +24,8 @@ export interface Resume {
   skills: string[];
   education: Education[];
   work_experiences: WorkExperience[];
+  volunteers: Volunteer[];
+  project_worked_on: Project[];
 }
 
 export interface Education {
@@ -62,12 +64,36 @@ export interface WorkExperience {
   responsibilities: string;
 }
 
+export interface Project {
+  id?: number;
+  title: string;
+  description?: string;
+  technologies?: string;
+  link?: string;
+}
+
+export interface Volunteer {
+  id?: number;
+  title: string;
+  description?: string;
+  link?: string;
+}
+
 export interface OptionType {
   label: string;
   value: number;
 }
 
-export interface ReOrder {
-  label: string;
+export const OrderLabel = {
+  Education: "Education",
+  WorkExperience: "Work Experience",
+  Skills: "Skills",
+  Projects: "Projects",
+  Volunteer: "Volunteer",
+};
+
+export interface ReOrderType {
+  label: (typeof OrderLabel)[keyof typeof OrderLabel];
+  addEvent?: () => void;
   component: React.ReactNode;
 }

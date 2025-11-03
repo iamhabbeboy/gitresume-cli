@@ -3,7 +3,7 @@ import { useStore } from "../../store";
 import ReactMarkdown from "react-markdown";
 import { AIAvailableOptions, type CommitMessage } from "../../types/project";
 import type { Prop } from "../../pages/projects/type";
-import { Bot, BriefcaseBusiness, Info } from "lucide-react";
+import { Bot, BriefcaseBusiness, ImportIcon, Info } from "lucide-react";
 import { t } from "../../util/config";
 import { Button } from "../ui/Button";
 import Spinner from "../Spinner";
@@ -128,7 +128,15 @@ const Contribution: React.FC<{ selectedProject: Prop | null }> = ({
                 ? "Select a project"
                 : "No project available"}
             </h1>
-            <p>Gitresume</p>
+
+            <Button className=" text-white mt-5 cursor-pointer bg-cyan-600 hover:bg-cyan-500">
+              <a
+                href="https://gitresume.app/git-integration"
+                className="flex gap-3"
+              >
+                <ImportIcon /> Import from Github
+              </a>
+            </Button>
           </div>
         </div>
       )}

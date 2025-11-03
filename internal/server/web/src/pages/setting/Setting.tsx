@@ -40,8 +40,8 @@ const Setting = () => {
               <Info />
             </span>
             <p className="w-11/12">
-              Your profile information will automatically populate all your
-              resumes by default.
+              This information is used as the default data source for all your
+              resumes.
             </p>
           </div>
 

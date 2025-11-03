@@ -26,7 +26,7 @@ type Action = {
     prompts: CustomPrompt
   ) => Promise<{ success: boolean; data: CommitMessage[]; error?: string }>;
   fetchCommitSummary: (projectId: number) => Promise<CommitMessage[]>;
-  fetchAIConfig: () => Promise<AIConfig>;
+  fetchAIConfig: () => void;
 };
 
 export const useStore = create<ProjectStore & Action>()((set, get) => ({
@@ -55,7 +55,6 @@ export const useStore = create<ProjectStore & Action>()((set, get) => ({
   fetchAIConfig: async () => {
     const resp = await axios.get(`${baseUri}/api/config`);
     set((state) => ({ ...state, ai_config: resp.data }));
-    return resp.data;
   },
   fetchCommitSummary: async (projectId: number): Promise<CommitMessage[]> => {
     try {

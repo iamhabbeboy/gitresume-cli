@@ -2,7 +2,9 @@ import { create } from "zustand";
 import type {
   Education,
   Profile,
+  Project,
   Resume,
+  Volunteer,
   WorkExperience,
 } from "../components/resume/type";
 import axios from "axios";
@@ -29,14 +31,22 @@ interface ResumeState {
     id: number
   ) => Promise<{ success: boolean; error: null | string }>;
   upsertEducation: (edu: Education[]) => void;
+  upsertVolunteer: (vol: Volunteer[]) => void;
   patchEducation: (edu: Education[]) => void;
+  patchProject: (prj: Project[]) => void;
+  patchVolunteer: (prj: Volunteer[]) => void;
   addEducation: () => void;
+  addProject: () => void;
+  addVolunteer: () => void;
   deleteEducation: (id: number) => void;
+  deleteProject: (id: number) => void;
+  deleteVolunteer: (id: number) => void;
   updateSkills: (skill: string[]) => void;
   deleteExperience: (id: number) => void;
   addExperience: () => void;
   patchExperience: (exp: WorkExperience[]) => void;
   upsertExperience: (exp: WorkExperience[]) => Promise<boolean>;
+  upsertProjects: (prj: Project[]) => void;
   resetResume: () => void;
   deleteResume: (id: number) => void;
   updateLinks: (links: string[]) => void;
@@ -66,8 +76,10 @@ export const useResumeStore = create<ResumeState>()(
           location: "",
         },
         education: [],
+        project_worked_on: [],
         work_experiences: [],
         skills: [],
+        volunteers: [],
       },
       updateProfile: (profile: Profile) => {
         set((state) => ({
@@ -272,6 +284,72 @@ export const useResumeStore = create<ResumeState>()(
           },
         }));
       },
+      addProject: () => {
+        // const allProjects = get().resume.projects || [];
+        set((state) => ({
+          resume: {
+            ...state.resume,
+            project_worked_on: [
+              ...(state.resume.project_worked_on || []),
+              {
+                id: state.resume.project_worked_on?.length + 1 || 0,
+                title: "",
+                description: "",
+                technologies: "",
+                link: "",
+              },
+            ],
+          },
+        }));
+      },
+      addVolunteer: () => {
+        set((state) => ({
+          resume: {
+            ...state.resume,
+            volunteers: [
+              ...(state.resume.volunteers || []),
+              {
+                id: state.resume.volunteers?.length + 1 || 0,
+                title: "",
+                description: "",
+                link: "",
+              },
+            ],
+          },
+        }));
+      },
+      deleteProject: async (id: number) => {
+        console.log(id);
+        // try {
+        //   const edu = get().resume.education ?? [];
+        //   await axios.delete(`${baseUri}/api/educations/${id}`);
+        //   const updateEdu = edu.filter((e) => e.id !== id);
+        //   set((state) => ({
+        //     resume: {
+        //       ...state.resume,
+        //       education: updateEdu,
+        //     },
+        //   }));
+        // } catch (e) {
+        //   console.log(e);
+        // }
+      },
+      deleteVolunteer: async (id: number) => {
+        console.log(id);
+        // try {
+        //   const edu = get().resume.education ?? [];
+        //   await axios.delete(`${baseUri}/api/educations/${id}`);
+        //   const updateEdu = edu.filter((e) => e.id !== id);
+        //   set((state) => ({
+        //     resume: {
+        //       ...state.resume,
+        //       education: updateEdu,
+        //     },
+        //   }));
+        // } catch (e) {
+        //   console.log(e);
+        // }
+      },
       deleteEducation: async (id: number) => {
         try {
           const edu = get().resume.education ?? [];
@@ -333,6 +411,16 @@ export const useResumeStore = create<ResumeState>()(
           return false;
         }
       },
+      patchProject: async (prj: Project[]) => {
+        set((state) => ({
+          resume: { ...state.resume, project_worked_on: prj },
+        }));
+      },
+      patchVolunteer: async (vol: Volunteer[]) => {
+        set((state) => ({
+          resume: { ...state.resume, volunteers: vol },
+        }));
+      },
       patchEducation: async (edu: Education[]) => {
         set((state) => ({
           resume: { ...state.resume, education: edu },
@@ -353,6 +441,49 @@ export const useResumeStore = create<ResumeState>()(
             resume: {
               ...state.resume,
               education: updateEduIds,
+            },
+          }));
+        } catch (e) {
+          console.log(e);
+        }
+      },
+      upsertVolunteer: async (vol: Volunteer[]) => {
+        const resumeId = get().resume.id;
+        try {
+          const request = await axios.put(
+            `${baseUri}/api/resumes/${resumeId}/volunteers`,
+            { volunteers: vol }
+          );
+
+          console.log(request.data);
+          const ids = request.data.data.ids;
+          const updateIds = vol.map((p, i) => ({ ...p, id: ids[i] }));
+
+          set((state) => ({
+            resume: {
+              ...state.resume,
+              volunteers: updateIds,
+            },
+          }));
+        } catch (e) {
+          console.log(e);
+        }
+      },
+      upsertProjects: async (projects: Project[]) => {
+        const resumeId = get().resume.id;
+        try {
+          const request = await axios.put(
+            `${baseUri}/api/resumes/${resumeId}/projects`,
+            { project_worked_on: projects }
+          );
+
+          const ids = request.data.data.ids;
+          const updateProjIds = projects.map((p, i) => ({ ...p, id: ids[i] }));
+
+          set((state) => ({
+            resume: {
+              ...state.resume,
+              projects: updateProjIds,
             },
           }));
         } catch (e) {
@@ -462,6 +593,8 @@ export const useResumeStore = create<ResumeState>()(
           },
           education: [],
           work_experiences: [],
+          project_worked_on: [],
+          volunteers: [],
           skills: [],
         };
         set(() => ({ resume: data }));

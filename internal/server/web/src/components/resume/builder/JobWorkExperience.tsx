@@ -148,16 +148,10 @@ const JobWorkExperience = () => {
     if (status) {
       handleCollapse(lastChangedExpId);
       return t({
-        message: "Experience successfully added",
+        message: "Great! Your experience has been added",
         icon: <CircleCheck />,
       });
     }
-    // toast("This is an action toast", {
-    //   action: {
-    //     label: "Close",
-    //     onClick: () => console.log("Action!"),
-    //   },
-    // });
   };
 
   const handleSummarize = async (data: string, expId: number) => {
@@ -231,7 +225,7 @@ const JobWorkExperience = () => {
             <div className="flex justify-between">
               <div>
                 <Button
-                  className="h-8 w-8 bg-blue-400 mr-3 cursor-pointer hover:bg-blue-600"
+                  className="h-8 w-8 bg-cyan-600 hover:bg-cyan-500 mr-3 cursor-pointer "
                   onClick={() => handleCollapse(id)}
                 >
                   {openId === id ? (
@@ -409,7 +403,7 @@ const JobWorkExperience = () => {
       )}
       {experiences.length > 0 && (
         <button
-          className="bg-blue-400 px-5 py-3 rounded-md text-sm text-white"
+          className="bg-cyan-600 hover:bg-cyan-500 px-5 py-3 rounded-md text-sm text-white"
           onClick={handleCreateExperience}
         >
           Save

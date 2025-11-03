@@ -29,7 +29,7 @@ const PersonalInformation = () => {
     updateProfile(payload);
     setLink("");
     return t({
-      message: "Link updated successfully",
+      message: "Great! Your link has been updated",
       icon: <CircleCheck />,
     });
   };
@@ -111,7 +111,7 @@ const PersonalInformation = () => {
         <Button
           onClick={handleSaveLinks}
           size="icon"
-          className="bg-blue-400 text-white mt-4"
+          className="bg-cyan-600 hover:bg-cyan-500 text-white mt-4"
         >
           <Plus className="h-4 w-4" />
         </Button>

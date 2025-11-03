@@ -12,34 +12,14 @@ import type { CustomPrompt, LLmConfig, Prompt } from "../../types/ai-config";
 import { useStore } from "../../store";
 
 const LLMConfig = () => {
-  const [llms, setLLms] = useState<LLmConfig[]>([]);
   const { ai_config } = useStore();
-
+  const [llms, setLLms] = useState<LLmConfig[]>([]);
   const [promptOption, setPromptOption] = useState<CustomPrompt[]>([]);
 
   useEffect(() => {
-    let isMounted = true;
-
-    (async () => {
-      try {
-        const resp = ai_config;
-        if (isMounted) {
-          setLLms(resp.models);
-          setPromptOption(resp.custom_prompt);
-        }
-      } catch (e) {
-        const message = e instanceof Error ? e.message : "Unknown error";
-        return t({
-          message: "Failed to fetch LLMs:" + message,
-          icon: <Info />,
-        });
-      }
-    })();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+    setLLms(ai_config.models);
+    setPromptOption(ai_config.custom_prompt);
+  }, [ai_config.custom_prompt, ai_config.models]);
 
   const options = useMemo(
     () => llms.map((llm, index) => ({ label: llm.name, value: index })),
@@ -71,7 +51,7 @@ const LLMConfig = () => {
       api_key: defaultLLm?.api_key ?? "",
       is_default: defaultLLm?.is_default ?? false,
     });
-  }, [llms.length]);
+  }, [defaultLLm, llms, llms.length]);
 
   const handleConfig = (values: OptionType[]) => {
     setConfig(values);
