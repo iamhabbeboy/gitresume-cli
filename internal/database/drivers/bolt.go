@@ -226,3 +226,11 @@ func (d *Db) CreateOrUpdateLLmPrompt(cfg config.CustomPrompt) error {
 func (d *Db) GetLLmPromptConfig() ([]config.CustomPrompt, error) {
 	return nil, nil
 }
+
+func (d *Db) CreateOrUpdateVolunteering(rID int64, v []git.Volunteer) ([]int64, error) {
+	return nil, nil
+}
+
+func (d *Db) CreateOrUpdateProjectOn(rID int64, v []git.ProjectWorkedOn) ([]int64, error) {
+	return nil, nil
+}

@@ -111,6 +111,30 @@ func Serve(db database.IDatabase) {
 		}
 	})
 
+	// Volunteer
+	mux.HandleFunc("/api/resumes/{id}/volunteers", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPut:
+			CreateOrUpdateVolunteerHandler(db)(w, r)
+		case http.MethodDelete:
+			DeleteEducationHandler(db)(w, r)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	// Project
+	mux.HandleFunc("/api/resumes/{id}/projects", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPut:
+			CreateOrUpdateProjectHandler(db)(w, r)
+		case http.MethodDelete:
+			DeleteEducationHandler(db)(w, r)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
 	middlewares := []Middleware{
 		CORSSecurityMiddleware,
 		LoggingMiddleware,

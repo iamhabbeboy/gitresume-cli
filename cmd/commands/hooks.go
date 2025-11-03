@@ -64,13 +64,13 @@ func SetupHook(db database.IDatabase) error {
 			Email: userCfg["email"],
 		},
 		AiOptions: []config.AiOptions{{
-			Name:   "llama",
-			Model:  "llama3.2",
-			ApiKey: "",
+			Name:      "llama",
+			Model:     "llama3.2",
+			ApiKey:    "",
+			IsDefault: true,
 		}},
 	})
 
-	// err = config.AddProject(path, u)
 	if err != nil {
 		return err
 	}
@@ -89,6 +89,14 @@ func SetupHook(db database.IDatabase) error {
 
 		if err != nil {
 			return err
+		}
+	}
+
+	// create llm config
+	llmPrmts := defaultPromptConfig()
+	for _, v := range llmPrmts {
+		if err := db.CreateOrUpdateLLmPrompt(v); err != nil {
+			return fmt.Errorf("failed to create default llm prompt %q: %w", v.Title, err)
 		}
 	}
 
@@ -170,4 +178,33 @@ func IsConfigInitialized() bool {
 		return false
 	}
 	return err == nil
+}
+
+func defaultPromptConfig() []config.CustomPrompt {
+	return []config.CustomPrompt{
+		{
+			Title:       "project",
+			Temperature: 0.5,
+			MaxTokens:   400,
+			Prompts: newPrompt([]string{
+				"You are an HR-trained resume assistant skilled in structuring work experiences for software engineering roles.",
+				"Write a concise 3–5 detailed bullet points for professional experiences in software engineering, focusing on measurable achievements: %content%",
+			}),
+		}, {
+			Title:       "summary",
+			Temperature: 0.5,
+			MaxTokens:   300,
+			Prompts: newPrompt([]string{
+				"You are an expert technical writer specializing in crafting professional resume summaries for software engineers.",
+				"Write a concise 3–5 sentence summary highlighting key programming languages, frameworks, and problem-solving experience for a Software Engineer: %content%",
+			}),
+		},
+	}
+}
+
+func newPrompt(cont []string) []config.Prompt {
+	return []config.Prompt{
+		{Role: string(ai.System), Content: cont[0]},
+		{Role: string(ai.User), Content: cont[1]},
+	}
 }

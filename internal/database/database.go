@@ -41,6 +41,9 @@ type IDatabase interface {
 
 	CreateOrUpdateLLmPrompt(cfg config.CustomPrompt) error
 	GetLLmPromptConfig() ([]config.CustomPrompt, error)
+
+	CreateOrUpdateVolunteering(rID int64, v []git.Volunteer) ([]int64, error)
+	CreateOrUpdateProjectOn(rID int64, v []git.ProjectWorkedOn) ([]int64, error)
 }
 
 type DBName string

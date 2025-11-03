@@ -365,8 +365,10 @@ func (s *sqliteDB) GetResume(ID int64) (git.Resume, error) {
 		links                sql.NullString
 		professional_summary sql.NullString
 
-		education      sql.NullString
-		workExperience sql.NullString
+		education       sql.NullString
+		workExperience  sql.NullString
+		projectWorkedOn sql.NullString
+		volunteering    sql.NullString
 	)
 
 	query := `
@@ -380,6 +382,35 @@ SELECT
     users.location,
     users.professional_summary,
     users.links,
+
+ 	-- VOLUNTEERING
+    COALESCE((
+        SELECT json_group_array(
+            json_object(
+                'id', v.id,
+                'title', v.title,
+                'description', v.description,
+                'link', v.link
+            )
+        )
+        FROM volunteering v
+        WHERE v.resume_id = resumes.id
+    ), '[]') AS volunteering,
+
+    -- PROJECTS WORKED ON
+    COALESCE((
+        SELECT json_group_array(
+            json_object(
+                'id', p.id,
+                'title', p.title,
+                'description', p.description,
+                'technologies', p.technologies,
+                'link', p.link
+            )
+        )
+        FROM project_worked_on p
+        WHERE p.resume_id = resumes.id
+    ), '[]') AS project_worked_on,
 
     -- EDUCATIONS
     COALESCE((
@@ -422,7 +453,7 @@ GROUP BY resumes.id;
   `
 
 	err := s.conn.QueryRow(query, ID).
-		Scan(&title, &skills, &is_published, &name, &email, &phone, &location, &professional_summary, &links, &education, &workExperience)
+		Scan(&title, &skills, &is_published, &name, &email, &phone, &location, &professional_summary, &links, &volunteering, &projectWorkedOn, &education, &workExperience)
 
 	if err == sql.ErrNoRows {
 		return git.Resume{}, errors.New("record with ID not found")
@@ -451,6 +482,16 @@ GROUP BY resumes.id;
 		_ = json.Unmarshal([]byte(workExperience.String), &wk)
 	}
 
+	var prj []git.ProjectWorkedOn
+	if projectWorkedOn.Valid {
+		_ = json.Unmarshal([]byte(projectWorkedOn.String), &prj)
+	}
+
+	var vol []git.Volunteer
+	if volunteering.Valid {
+		_ = json.Unmarshal([]byte(volunteering.String), &vol)
+	}
+
 	return git.Resume{
 		ID:              ID,
 		Title:           title,
@@ -458,6 +499,8 @@ GROUP BY resumes.id;
 		IsPublished:     is_published,
 		Education:       edu,
 		WorkExperiences: wk,
+		Volunteers:      vol,
+		ProjectWorkedOn: prj,
 		Profile: git.Profile{
 			Name:                name.String,
 			Email:               strings.TrimSpace(email.String),
@@ -852,6 +895,116 @@ func (s *sqliteDB) GetLLmPromptConfig() ([]config.CustomPrompt, error) {
 	}
 
 	return prompts, nil
+}
+
+func (s *sqliteDB) CreateOrUpdateVolunteering(rID int64, v []git.Volunteer) ([]int64, error) {
+	tx, err := s.conn.Begin()
+	if len(v) == 0 {
+		return nil, errors.New("invalid data")
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	ids := make([]int64, 0, len(v))
+
+	for _, vol := range v {
+		var (
+			exists bool
+			lastID int64
+		)
+		q := `SELECT EXISTS(SELECT 1 FROM volunteering WHERE id=?)`
+		err = tx.QueryRow(q, vol.ID).Scan(&exists)
+
+		if err != nil {
+			log.Printf("check exists id=%d: %v", vol.ID, err)
+			continue
+		}
+
+		if exists {
+			query := `UPDATE volunteering SET title=?, description=?, link=?WHERE resume_id=?`
+			row, err := tx.Exec(query, vol.Title, vol.Description, vol.Link, rID)
+			if err != nil {
+				tx.Rollback()
+				log.Printf("unable to update id=%d: %v", vol.ID, err)
+				continue
+			}
+			id, _ := row.LastInsertId()
+			lastID = id
+		} else {
+			query := "INSERT INTO volunteering (resume_id, title, description, link) VALUES (?, ?, ?, ?)"
+
+			row, err := tx.Exec(query, rID, vol.Title, vol.Description, vol.Link, rID)
+			if err != nil {
+				tx.Rollback()
+				log.Printf("unable to create id=%d: %v", rID, err)
+				continue
+			}
+			id, _ := row.LastInsertId()
+			lastID = id
+		}
+		ids = append(ids, lastID)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return ids, nil
+}
+
+func (s *sqliteDB) CreateOrUpdateProjectOn(rID int64, p []git.ProjectWorkedOn) ([]int64, error) {
+	tx, err := s.conn.Begin()
+	if len(p) == 0 {
+		return nil, errors.New("invalid data")
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	ids := make([]int64, 0, len(p))
+
+	for _, vol := range p {
+		var (
+			exists bool
+			lastID int64
+		)
+		q := `SELECT EXISTS(SELECT 1 FROM project_worked_on WHERE id=?)`
+		err = tx.QueryRow(q, vol.ID).Scan(&exists)
+
+		if err != nil {
+			log.Printf("check exists id=%d: %v", vol.ID, err)
+			continue
+		}
+
+		if exists {
+			query := `UPDATE project_worked_on SET title=?, description=?, technologies=?, link=? WHERE resume_id=?`
+			row, err := tx.Exec(query, vol.Title, vol.Description, vol.Link, rID)
+			if err != nil {
+				tx.Rollback()
+				log.Printf("unable to update id=%d: %v", vol.ID, err)
+				continue
+			}
+			id, _ := row.LastInsertId()
+			lastID = id
+		} else {
+			query := "INSERT INTO project_worked_on (resume_id, title, description, technologies, link) VALUES (?, ?, ?, ?, ?)"
+
+			row, err := tx.Exec(query, rID, vol.Title, vol.Description, vol.Technologies, vol.Link, rID)
+			if err != nil {
+				tx.Rollback()
+				log.Printf("unable to create id=%d: %v", rID, err)
+				continue
+			}
+			id, _ := row.LastInsertId()
+			lastID = id
+		}
+		ids = append(ids, lastID)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return ids, nil
 }
 
 func (s *sqliteDB) Delete(key string) error {
