@@ -94,13 +94,21 @@ func (s *sqliteDB) CreateProject(data git.Project) error {
 	if err != nil {
 		return err
 	}
-	// store projects
-	row, err := tx.Exec("INSERT INTO projects (user_id, name, path, technologies) VALUES (?, ?, ?, ?)", 1, data.Name, data.Path, data.Technologies)
-	if err != nil {
-		tx.Rollback()
-		return err
+
+	p, err := s.GetProjectByName(data.Name)
+	var prjID int64 = int64(p.ID)
+
+	if p.Name == "" {
+		// store projects
+		query := `INSERT INTO projects (user_id, name, path, technologies) VALUES (?, ?, ?, ?)`
+		row, err := tx.Exec(query, 1, data.Name, data.Path, data.Technologies)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+		lID, _ := row.LastInsertId()
+		prjID = lID
 	}
-	prjID, _ := row.LastInsertId()
 	// store commits
 	placeholders := make([]string, 0, len(data.Commits))
 	value := make([]any, 0, len(data.Commits)*2)
@@ -109,11 +117,11 @@ func (s *sqliteDB) CreateProject(data git.Project) error {
 		placeholders = append(placeholders, "(?, ?, ?)")
 		value = append(value, prjID, v.Msg, v.Hash)
 	}
-	query := fmt.Sprintf(
+	q := fmt.Sprintf(
 		"INSERT INTO commits (project_id, message, hash) VALUES %s",
 		strings.Join(placeholders, ","),
 	)
-	_, err = tx.Exec(query, value...)
+	_, err = tx.Exec(q, value...)
 
 	if err := tx.Commit(); err != nil {
 		return err
