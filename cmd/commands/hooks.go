@@ -141,14 +141,13 @@ func SeedHook(db database.IDatabase) error {
 		if len(newLogs) > 0 && newLogs[0].Hash == lastHash {
 			newLogs = newLogs[1:]
 		}
-		fmt.Println("New ones here ", len(newLogs))
 		if len(newLogs) == 0 {
 			fmt.Println("No new commits to update")
 			return nil
 		}
 		logCount = len(newLogs)
 
-		mergeLogs = append(p.Commits, newLogs...)
+		mergeLogs = newLogs
 	} else {
 		// no previous logs
 		allLogs, err := gitutil.GetCommits(usrEmail, "")
