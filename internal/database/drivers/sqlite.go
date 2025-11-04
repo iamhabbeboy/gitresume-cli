@@ -106,11 +106,11 @@ func (s *sqliteDB) CreateProject(data git.Project) error {
 	value := make([]any, 0, len(data.Commits)*2)
 
 	for _, v := range data.Commits {
-		placeholders = append(placeholders, "(?, ?)")
-		value = append(value, prjID, v.Msg)
+		placeholders = append(placeholders, "(?, ?, ?)")
+		value = append(value, prjID, v.Msg, v.Hash)
 	}
 	query := fmt.Sprintf(
-		"INSERT INTO commits (project_id, message) VALUES %s",
+		"INSERT INTO commits (project_id, message, hash) VALUES %s",
 		strings.Join(placeholders, ","),
 	)
 	_, err = tx.Exec(query, value...)
