@@ -23,7 +23,7 @@ type GitUser struct {
 
 type GitCommit struct {
 	ID        int    `json:"commit_id"`
-	Hash      string `json:"-"`
+	Hash      string `json:"hash"`
 	Msg       string `json:"message"`
 	CreatedAt string `json:"created_at"`
 	UpdatedAt string `json:"updated_at"`
