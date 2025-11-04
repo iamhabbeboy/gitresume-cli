@@ -170,6 +170,9 @@ func (g *GitUtil) GetCommits(email, lastHash string) ([]GitCommit, error) {
 	splt := strings.Split(logs, "\n")
 	for _, value := range splt {
 		log := strings.Split(value, "=")
+		if len(log) < 2 {
+			continue
+		}
 		hash := log[0]
 		msg := log[1]
 
