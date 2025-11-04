@@ -134,12 +134,11 @@ func SeedHook(db database.IDatabase) error {
 		// retrieve the new ones
 		lastIndex := len(p.Commits) - 1
 		lastHash := p.Commits[lastIndex].Hash
-		fmt.Println(lastHash, " is here")
 		newLogs, err := gitutil.GetCommits(usrEmail, lastHash)
 		if err != nil {
 			return err
 		}
-		if len(newLogs) > 0 && newLogs[lastIndex].Hash == lastHash {
+		if len(newLogs) > 0 && newLogs[0].Hash == lastHash {
 			newLogs = newLogs[1:]
 		}
 		if len(newLogs) == 0 {
@@ -155,11 +154,9 @@ func SeedHook(db database.IDatabase) error {
 		if err != nil {
 			return fmt.Errorf("failed to get commits: %w", err)
 		}
-
 		if len(allLogs) == 0 {
 			return errors.New("no commits available")
 		}
-		fmt.Println("Old ones here, ", len(allLogs))
 		logCount = len(allLogs)
 		mergeLogs = allLogs
 	}

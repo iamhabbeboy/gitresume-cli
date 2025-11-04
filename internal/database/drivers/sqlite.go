@@ -113,7 +113,8 @@ func (s *sqliteDB) CreateProject(data git.Project) error {
 	placeholders := make([]string, 0, len(data.Commits))
 	value := make([]any, 0, len(data.Commits)*2)
 
-	for _, v := range data.Commits {
+	for i := len(data.Commits) - 1; i >= 0; i-- {
+		v := data.Commits[i]
 		placeholders = append(placeholders, "(?, ?, ?)")
 		value = append(value, prjID, v.Msg, v.Hash)
 	}
@@ -167,6 +168,7 @@ func (s *sqliteDB) GetProjectByName(n string) (git.Project, error) {
 	}
 
 	return git.Project{
+		ID:      id,
 		Name:    name,
 		Path:    path,
 		Commits: coms,
