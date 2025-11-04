@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 
@@ -144,7 +143,7 @@ func SeedHook(db database.IDatabase) error {
 		}
 		fmt.Println("New ones here ", len(newLogs))
 		if len(newLogs) == 0 {
-			log.Println("no new commits to update")
+			fmt.Println("No new commits to update")
 			return nil
 		}
 		logCount = len(newLogs)
