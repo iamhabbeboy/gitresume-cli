@@ -132,13 +132,14 @@ func SeedHook(db database.IDatabase) error {
 	var mergeLogs []git.GitCommit
 	if len(p.Commits) > 0 {
 		// retrieve the new ones
-		lastHash := p.Commits[0].Hash
+		lastIndex := len(p.Commits) - 1
+		lastHash := p.Commits[lastIndex].Hash
 		fmt.Println(lastHash, " is here")
 		newLogs, err := gitutil.GetCommits(usrEmail, lastHash)
 		if err != nil {
 			return err
 		}
-		if len(newLogs) > 0 && newLogs[0].Hash == lastHash {
+		if len(newLogs) > 0 && newLogs[lastIndex].Hash == lastHash {
 			newLogs = newLogs[1:]
 		}
 		if len(newLogs) == 0 {
