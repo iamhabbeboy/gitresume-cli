@@ -128,10 +128,13 @@ func SeedHook(db database.IDatabase) error {
 
 	gitutil := git.NewGitUtil(project)
 
+	var logCount int = 0
+
 	var mergeLogs []git.GitCommit
 	if len(p.Commits) > 0 {
 		// retrieve the new ones
-		lastHash := p.Commits[len(p.Commits)-1].Hash
+		lastHash := p.Commits[0].Hash
+		fmt.Println(lastHash, " is here")
 		newLogs, err := gitutil.GetCommits(usrEmail, lastHash)
 		if err != nil {
 			return err
@@ -139,10 +142,13 @@ func SeedHook(db database.IDatabase) error {
 		if len(newLogs) > 0 && newLogs[0].Hash == lastHash {
 			newLogs = newLogs[1:]
 		}
+		fmt.Println("New ones here ", len(newLogs))
 		if len(newLogs) == 0 {
 			log.Println("no new commits to update")
 			return nil
 		}
+		logCount = len(newLogs)
+
 		mergeLogs = append(p.Commits, newLogs...)
 	} else {
 		// no previous logs
@@ -154,6 +160,8 @@ func SeedHook(db database.IDatabase) error {
 		if len(allLogs) == 0 {
 			return errors.New("no commits available")
 		}
+		fmt.Println("Old ones here, ", len(allLogs))
+		logCount = len(allLogs)
 		mergeLogs = allLogs
 	}
 
@@ -169,10 +177,10 @@ func SeedHook(db database.IDatabase) error {
 		Technologies: string(techJSON),
 	}
 
-	if err = db.Store(prj); err != nil {
+	if err = db.CreateProject(prj); err != nil {
 		return err
 	}
-	fmt.Printf("✔ Fetched %v of your commits from %v \n", len(mergeLogs), prj.Name)
+	fmt.Printf("✔ Fetched %v of your commits from %v \n", logCount, prj.Name)
 	fmt.Printf("✔ Extracted contribution details, tech stack, and frameworks \n\n")
 	return nil
 }
