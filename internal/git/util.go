@@ -3,6 +3,7 @@ package git
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -22,6 +23,7 @@ type GitUser struct {
 
 type GitCommit struct {
 	ID        int    `json:"commit_id"`
+	Hash      string `json:"-"`
 	Msg       string `json:"message"`
 	CreatedAt string `json:"created_at"`
 	UpdatedAt string `json:"updated_at"`
@@ -152,8 +154,14 @@ func (g *GitUtil) GetStacks(email string) (TechStack, error) {
 	}, nil
 }
 
-func (g *GitUtil) GetCommits(email string) ([]GitCommit, error) {
-	logs, err := RunGitCommand(g.Path, "log", "--pretty=format:%at=%s", "--author", email)
+func (g *GitUtil) GetCommits(email, lastHash string) ([]GitCommit, error) {
+	var logs string
+	cmdArgs := []string{"log", "--pretty=format:%h=%s", "--author", email}
+
+	if lastHash != "" {
+		cmdArgs = append(cmdArgs, fmt.Sprintf("%s..HEAD", lastHash))
+	}
+	logs, err := RunGitCommand(g.Path, cmdArgs...)
 	if err != nil {
 		return nil, err
 	}
@@ -162,13 +170,8 @@ func (g *GitUtil) GetCommits(email string) ([]GitCommit, error) {
 	splt := strings.Split(logs, "\n")
 	for _, value := range splt {
 		log := strings.Split(value, "=")
-		// timestampStr := log[0]
+		hash := log[0]
 		msg := log[1]
-
-		// timestampInt, err := strconv.ParseInt(timestampStr, 10, 64)
-		// if err != nil {
-		// 	return nil, err
-		// }
 
 		if strings.Contains(msg, "Merge") {
 			continue
@@ -177,7 +180,8 @@ func (g *GitUtil) GetCommits(email string) ([]GitCommit, error) {
 		stripMsg := strings.Replace(msg, "--author", "", 1)
 		stripMsg = strings.TrimSpace(stripMsg)
 		commits = append(commits, GitCommit{
-			Msg: stripMsg,
+			Msg:  stripMsg,
+			Hash: hash,
 		})
 	}
 	return commits, nil

@@ -89,7 +89,7 @@ func (s *sqliteDB) CreateUser(data git.Profile) (int64, error) {
 	return lastID, nil
 }
 
-func (s *sqliteDB) Store(data git.Project) error {
+func (s *sqliteDB) CreateProject(data git.Project) error {
 	tx, err := s.conn.Begin()
 	if err != nil {
 		return err
@@ -123,12 +123,27 @@ func (s *sqliteDB) Store(data git.Project) error {
 
 func (s *sqliteDB) GetProjectByName(n string) (git.Project, error) {
 	var (
-		id   int
-		name string
-		path string
+		id      int
+		name    string
+		path    string
+		commits sql.NullString
 	)
-	err := s.conn.QueryRow("SELECT id, name, path FROM projects WHERE name = ?", n).
-		Scan(&id, &name, &path)
+	query := `
+		SELECT 
+			p.id, p.name, p.path, COALESCE((
+        SELECT json_group_array(
+            json_object(
+                'id', c.id,
+                'hash', c.hash,
+                'message', c.message
+            )
+        )
+        FROM commits c
+	WHERE c.project_id = p.id
+        ), '[]') AS commits
+		FROM projects p WHERE p.name = ?`
+	err := s.conn.QueryRow(query, n).
+		Scan(&id, &name, &path, &commits)
 
 	if err == sql.ErrNoRows {
 		return git.Project{}, nil
@@ -138,7 +153,16 @@ func (s *sqliteDB) GetProjectByName(n string) (git.Project, error) {
 		return git.Project{}, err
 	}
 
-	return git.Project{Name: name, Path: path}, nil
+	var coms []git.GitCommit
+	if commits.Valid {
+		err = json.Unmarshal([]byte(commits.String), &coms)
+	}
+
+	return git.Project{
+		Name:    name,
+		Path:    path,
+		Commits: coms,
+	}, nil
 }
 
 func (s *sqliteDB) UpsertCommit(commits []git.CustomUpdateCommit) error {

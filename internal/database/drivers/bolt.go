@@ -124,7 +124,7 @@ func (s *Db) GetAllCommitSummary(projectID int) ([]git.CustomUpdateCommit, error
 	return nil, nil
 }
 
-func (d *Db) Store(data git.Project) error {
+func (d *Db) CreateProject(data git.Project) error {
 	key := uuid.New().String()
 	err := d.Db.Update(func(tx *bolt.Tx) error {
 		bucket, err := tx.CreateBucketIfNotExists([]byte(d.Name))

@@ -17,7 +17,7 @@ type IDatabase interface {
 	Migrate() error
 	Delete(key string) error
 	Close() error
-	Store(data git.Project) error
+	CreateProject(data git.Project) error
 	GetResume(ID int64) (git.Resume, error)
 	GetResumes() ([]git.Resume, error)
 	DeleteResume(rID int64) error
