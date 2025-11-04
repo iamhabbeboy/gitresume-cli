@@ -31,10 +31,8 @@ func CreateOrUpdateEducationHandler(db database.IDatabase) http.HandlerFunc {
 
 		ids, err := db.CreateOrUpdateEducation(int64(rID), req.Education)
 		if err != nil {
-			if err != nil {
-				http.Error(w, "error occured: "+err.Error(), http.StatusBadRequest)
-				return
-			}
+			http.Error(w, "error occured: "+err.Error(), http.StatusBadRequest)
+			return
 		}
 
 		res := struct {

@@ -201,7 +201,7 @@ func (s *sqliteDB) UpsertCommit(commits []git.CustomUpdateCommit) error {
 		if rowsAffected == 0 {
 			log.Printf("⚠️ Record with id=%d does not exist, skipping update\n", v.ID)
 		} else {
-			log.Printf("✅ Updated record id=%d\n", v.ID)
+			log.Printf("Updated record id=%d\n", v.ProjectID)
 		}
 	}
 
@@ -887,7 +887,7 @@ func (s *sqliteDB) GetLLmPromptConfig() ([]config.CustomPrompt, error) {
 		var prompt []config.Prompt
 		_ = json.Unmarshal([]byte(content), &prompt)
 		prompts = append(prompts, config.CustomPrompt{
-			Title:       title,
+			Title:       config.PromptType(title),
 			Temperature: temp,
 			MaxTokens:   maxTok,
 			Prompts:     prompt,
@@ -978,7 +978,7 @@ func (s *sqliteDB) CreateOrUpdateProjectOn(rID int64, p []git.ProjectWorkedOn) (
 
 		if exists {
 			query := `UPDATE project_worked_on SET title=?, description=?, technologies=?, link=? WHERE resume_id=?`
-			row, err := tx.Exec(query, vol.Title, vol.Description, vol.Link, rID)
+			row, err := tx.Exec(query, vol.Title, vol.Description, vol.Technologies, vol.Link, rID)
 			if err != nil {
 				tx.Rollback()
 				log.Printf("unable to update id=%d: %v", vol.ID, err)
@@ -1005,6 +1005,14 @@ func (s *sqliteDB) CreateOrUpdateProjectOn(rID int64, p []git.ProjectWorkedOn) (
 		return nil, err
 	}
 	return ids, nil
+}
+
+func (s *sqliteDB) DeleteProjectWorkedOn(pID int64) error {
+	_, err := s.conn.Exec("DELETE FROM project_worked_on WHERE id=?", pID)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *sqliteDB) Delete(key string) error {

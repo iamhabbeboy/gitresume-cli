@@ -38,7 +38,9 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 
-		sw := &statusResponseWriter{ResponseWriter: w, status: 200}
+		sw := &statusResponseWriter{
+			status: 200,
+		}
 		next.ServeHTTP(w, r)
 
 		methodColor := color.New(color.FgGreen).SprintFunc()

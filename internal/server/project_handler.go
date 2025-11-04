@@ -51,3 +51,26 @@ func CreateOrUpdateProjectHandler(db database.IDatabase) http.HandlerFunc {
 		json.NewEncoder(w).Encode(res)
 	}
 }
+
+func DeleteProjectHandler(db database.IDatabase) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		idStr := GetCenterID(w, r.URL.Path)
+		pID, err := strconv.Atoi(idStr)
+		if err != nil {
+			http.Error(w, "invalid ID: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		if err = db.DeleteProjectWorkedOn(int64(pID)); err != nil {
+			http.Error(w, "unable to project: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		res := Response{
+			Message: "project deleted successfully",
+			Status:  http.StatusCreated,
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(res)
+	}
+}
