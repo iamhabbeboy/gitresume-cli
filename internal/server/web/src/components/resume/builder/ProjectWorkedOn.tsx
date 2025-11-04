@@ -44,7 +44,7 @@ const ProjectWorkedOn = () => {
     }
     upsertProjects(projects);
     return t({
-      message: "Great! Your project has been added",
+      message: "Great! Your project has been updated",
       icon: <CircleCheck />,
     });
   };
@@ -151,7 +151,7 @@ const ProjectWorkedOn = () => {
                 <div>
                   <Label>Link</Label>
                   <Input
-                    type="month"
+                    type="text"
                     className="my-1 border-gray-300"
                     value={prj.link || ""}
                     onChange={(e) =>

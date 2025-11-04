@@ -50,6 +50,8 @@ const Contribution: React.FC<{ selectedProject: Prop | null }> = ({
       (prmpt) => prmpt.is_default
     );
 
+    console.log(defaultModel);
+
     if (!defaultModel && customPrompt.length === 0) {
       return t({
         message:
@@ -86,6 +88,7 @@ const Contribution: React.FC<{ selectedProject: Prop | null }> = ({
       version: defaultModel?.model,
       prompts: transformer,
       title: "",
+      api_key: defaultModel?.api_key,
     };
     console.log(body);
 
@@ -93,7 +96,6 @@ const Contribution: React.FC<{ selectedProject: Prop | null }> = ({
       selectedProject?.id as number,
       body
     );
-    console.log(response);
 
     if (response.error) {
       const error = response.error;

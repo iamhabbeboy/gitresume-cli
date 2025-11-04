@@ -157,7 +157,7 @@ const JobWorkExperience = () => {
   const handleSummarize = async (data: string, expId: number) => {
     const transform = htmlListToArray(data);
     const aiPromptConfig = store.ai_config;
-    console.log(aiPromptConfig);
+
     const customPrompt = aiPromptConfig.custom_prompt;
     const defaultModel = aiPromptConfig.models.find(
       (prmpt) => prmpt.is_default
@@ -184,6 +184,7 @@ const JobWorkExperience = () => {
       version: defaultModel?.model,
       prompts: transformer,
       title: "",
+      api_key: defaultModel?.api_key,
     };
 
     const resp = await summarizeResponsibility(body);

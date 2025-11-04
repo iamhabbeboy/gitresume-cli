@@ -319,20 +319,19 @@ export const useResumeStore = create<ResumeState>()(
         }));
       },
       deleteProject: async (id: number) => {
-        console.log(id);
-        // try {
-        //   const edu = get().resume.education ?? [];
-        //   await axios.delete(`${baseUri}/api/educations/${id}`);
-        //   const updateEdu = edu.filter((e) => e.id !== id);
-        //   set((state) => ({
-        //     resume: {
-        //       ...state.resume,
-        //       education: updateEdu,
-        //     },
-        //   }));
-        // } catch (e) {
-        //   console.log(e);
-        // }
+        try {
+          const prjs = get().resume.project_worked_on ?? [];
+          await axios.delete(`${baseUri}/api/resumes/${id}/projects`);
+          const updateEdu = prjs.filter((e) => e.id !== id);
+          set((state) => ({
+            resume: {
+              ...state.resume,
+              project_worked_on: updateEdu,
+            },
+          }));
+        } catch (e) {
+          console.log(e);
+        }
       },
       deleteVolunteer: async (id: number) => {
         console.log(id);
