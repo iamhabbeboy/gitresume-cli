@@ -2,45 +2,28 @@ package ai
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
 	"regexp"
 	"strings"
+
+	"github.com/iamhabbeboy/gitresume/config"
 )
 
 type LlamaConfig struct {
-}
-
-type Request struct {
-	Model       string  `json:"model"`
-	Prompt      string  `json:"prompt"`
-	Stream      bool    `json:"stream"`
-	Format      string  `json:"format"`
-	Raw         bool    `json:"raw"`
-	Temperature float64 `json:"temperature"`
-	N           int     `json:"n"`
-	TopP        int     `json:"top_p"`
+	Model  string              `json:"model"`
+	Prompt config.CustomPrompt `json:"prompt"`
 }
 
 type Response struct {
 	Response string `json:"response"`
 }
 
-type ChatRequest struct {
-	Model    string        `json:"model"`
-	Messages []ChatMessage `json:"messages"`
-	Stream   bool          `json:"stream"`
-}
-
-type ChatMessage struct {
-	Role    Role   `json:"role"`
-	Content string `json:"content"`
-}
-
 type ChatResponse struct {
-	Message ChatMessage `json:"message"`
+	Message config.Prompt `json:"message"`
 }
 
 var (
@@ -50,64 +33,31 @@ var (
 	AIModel            = "llama3.2"
 )
 
-func NewLlama() *LlamaConfig {
-	return &LlamaConfig{}
+func NewLlama(cfg ModelConfig) *LlamaConfig {
+	return &LlamaConfig{
+		Model: cfg.Model,
+		Prompt: config.CustomPrompt{
+			MaxTokens:   cfg.MaxToken,
+			Temperature: cfg.Temperature,
+		},
+	}
 }
 
-func (l *LlamaConfig) Generate(message string) (string, error) {
-	data := Request{
-		Model:       AIModel,
-		Prompt:      message,
-		Stream:      false,
-		Raw:         true,
-		N:           1,
-		Temperature: 0.0,
-		TopP:        1,
-	}
-
-	msg, err := json.Marshal(data)
-
-	if err != nil {
-		return "", err
-	}
-
-	res, err := http.Post(aiHost+aiGenerateEndpoint, "application/json", bytes.NewBuffer(msg))
-
-	if err != nil {
-		return "", err
-	}
-	defer res.Body.Close()
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		return "", err
-	}
-
-	var resp Response
-	err = json.Unmarshal(body, &resp)
-	return resp.Response, nil
+func (l *LlamaConfig) Generate(ctx context.Context, message string) (string, error) {
+	return "", nil
 }
 
-func (l *LlamaConfig) Chat(messages []string) ([]string, error) {
-	if len(messages) == 0 {
-		return nil, errors.New("no messages")
-	}
-
-	msgs := []ChatMessage{{
-		Role:    System,
-		Content: messages[0],
-	}}
-
-	if len(messages) > 1 {
-		msgs = append(msgs, ChatMessage{
-			Role:    User,
-			Content: messages[1],
-		})
+func (l *LlamaConfig) Chat(ctx context.Context, prompts []config.Prompt) ([]string, error) {
+	if len(prompts) == 0 {
+		return nil, errors.New("no prompt supplied")
 	}
 
 	data := ChatRequest{
-		Model:    AIModel,
-		Messages: msgs,
-		Stream:   false,
+		Stream:      false,
+		Messages:    prompts,
+		Model:       l.Model,
+		NumPredict:  l.Prompt.MaxTokens,
+		Temperature: l.Prompt.Temperature,
 	}
 
 	msg, _ := json.Marshal(data)

@@ -106,11 +106,12 @@ export default function ResumePreview({ data, order }: ResumePreviewProps) {
             <div className="flex justify-between items-start">
               <div>
                 <h3 className="font-semibold text-foreground">
-                  {prj.technologies || "Title"}{" "}
+                  {prj.title || "Title"}
                 </h3>
                 <p className="text-sm text-muted-foreground">
                   {prj.description || "Description"}
                 </p>
+                <p className="text-xs italic">Tech: {prj.technologies}</p>
                 <span className="text-sm text-muted-foreground whitespace-nowrap">
                   <a
                     href={prj.link}

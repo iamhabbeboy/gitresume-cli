@@ -1,18 +1,32 @@
 package ai
 
-import "log"
+import (
+	"context"
+	"fmt"
+
+	"github.com/iamhabbeboy/gitresume/config"
+)
 
 type AiModel interface {
-	Generate(message string) (string, error)
-	Chat(messages []string) ([]string, error)
+	Generate(ctx context.Context, message string) (string, error)
+	Chat(ctx context.Context, prompt []config.Prompt) ([]string, error)
 }
 
-type Model string
+type ChatRequest struct {
+	Model       string          `json:"model"`
+	Messages    []config.Prompt `json:"messages"`
+	Stream      bool            `json:"stream"`
+	Temperature float32         `json:"temperature"`
+	NumPredict  int             `json:"num_predict"`
+	MaxTokens   int             `json:"max_tokens"`
+}
+
+type ModelType string
 
 const (
-	OpenAI      Model = "openai"
-	HuggingFace Model = "huggingface"
-	Llama       Model = "llama"
+	OpenAI      ModelType = "openai"
+	HuggingFace ModelType = "huggingface"
+	Llama       ModelType = "llama"
 )
 
 type Role string
@@ -23,15 +37,22 @@ const (
 	Assistant Role = "assistant"
 )
 
-func NewChatModel(model Model) AiModel {
-	switch model {
-	case Llama:
-		return NewLlama()
-	case OpenAI:
-		return NewOpenAI()
-	default:
-		log.Fatal("invalid model")
-	}
+type ModelConfig struct {
+	Type        ModelType
+	Model       string
+	APIKey      string
+	Temperature float32
+	MaxToken    int
+}
 
+func NewChatModel(cfg ModelConfig) AiModel {
+	switch cfg.Type {
+	case Llama:
+		return NewLlama(cfg)
+	case OpenAI:
+		return NewOpenAI(cfg)
+	default:
+		fmt.Errorf("unsupported AI model type: %s", cfg.Type)
+	}
 	return nil
 }

@@ -45,14 +45,14 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	aiConfigCmd.Flags().StringVar(&aiName, "name", "", "Name of the AI provider (e.g. openai)")
-	aiConfigCmd.Flags().StringVar(&apiKey, "api-key", "", "API key for the AI provider")
-	aiConfigCmd.Flags().StringVar(&model, "model", "", "A model for the AI provider")
+	// aiConfigCmd.Flags().StringVar(&aiName, "name", "", "Name of the AI provider (e.g. openai)")
+	// aiConfigCmd.Flags().StringVar(&apiKey, "api-key", "", "API key for the AI provider")
+	// aiConfigCmd.Flags().StringVar(&model, "model", "", "A model for the AI provider")
 
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(seedCmd)
 	rootCmd.AddCommand(dashboardCmd)
-	aiCmd.AddCommand(aiConfigCmd)
+	// aiCmd.AddCommand(aiConfigCmd)
 	rootCmd.AddCommand(aiCmd)
 	rootCmd.AddCommand(completionCmd)
 }
@@ -125,40 +125,16 @@ var aiConfigCmd = &cobra.Command{
 
 var aiCmd = &cobra.Command{
 	Use:   "ai",
-	Short: "AI integration",
+	Short: "Test AI integration",
 	Run: func(cmd *cobra.Command, args []string) {
-		err := commands.AiTestHook()
+		err := commands.AiTestHook(db)
 		if err != nil {
-			fmt.Println(errColor("Failed to start dashboard server:", err))
+			fmt.Println(errColor("Failed:", err))
 		} else {
 			fmt.Println("🚀 Done!")
 		}
 	},
 }
-
-//
-// var summaryCmd = &cobra.Command{
-// 	Use:   "summary",
-// 	Short: "Generate summary from last commit",
-// 	Run: func(cmd *cobra.Command, args []string) {
-// 		summary, err := ai.SummarizeLastCommit()
-// 		if err != nil {
-// 			fmt.Println("Error:", err)
-// 			return
-// 		}
-// 		fmt.Println("\n--- Summary ---\n", summary)
-// 		storage.SaveSummary(summary)
-// 	},
-// }
-//
-// var reportCmd = &cobra.Command{
-// 	Use:   "weekly",
-// 	Short: "Generate weekly dev report",
-// 	Run: func(cmd *cobra.Command, args []string) {
-// 		report := storage.GenerateWeeklyReport()
-// 		fmt.Println("\n--- Weekly Report ---\n", report)
-// 	},
-// }
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {

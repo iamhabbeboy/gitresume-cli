@@ -234,3 +234,7 @@ func (d *Db) CreateOrUpdateVolunteering(rID int64, v []git.Volunteer) ([]int64, 
 func (d *Db) CreateOrUpdateProjectOn(rID int64, v []git.ProjectWorkedOn) ([]int64, error) {
 	return nil, nil
 }
+
+func (d *Db) DeleteProjectWorkedOn(pID int64) error {
+	return nil
+}

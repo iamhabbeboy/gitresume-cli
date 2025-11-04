@@ -1,9 +1,11 @@
 package commands
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 
@@ -64,10 +66,15 @@ func SetupHook(db database.IDatabase) error {
 			Email: userCfg["email"],
 		},
 		AiOptions: []config.AiOptions{{
-			Name:      "llama",
+			Name:      string(ai.Llama),
 			Model:     "llama3.2",
 			ApiKey:    "",
 			IsDefault: true,
+		}, {
+			Name:      string(ai.OpenAI),
+			Model:     "gpt-5-mini",
+			ApiKey:    "",
+			IsDefault: false,
 		}},
 	})
 
@@ -109,13 +116,45 @@ func SeedHook(db database.IDatabase) error {
 	}
 	project, _ := os.Getwd()
 
+	prjName := filepath.Base(project)
+
+	p, err := db.GetProjectByName(prjName)
+	if err != nil {
+		return err
+	}
+
 	conf, _ := config.GetProject(project)
 	usrEmail := strings.TrimSpace(conf.Email)
 
 	gitutil := git.NewGitUtil(project)
-	logs, err := gitutil.GetCommits(usrEmail)
-	if err != nil {
-		return err
+
+	var mergeLogs []git.GitCommit
+	if len(p.Commits) > 0 {
+		// retrieve the new ones
+		lastHash := p.Commits[len(p.Commits)-1].Hash
+		newLogs, err := gitutil.GetCommits(usrEmail, lastHash)
+		if err != nil {
+			return err
+		}
+		if len(newLogs) > 0 && newLogs[0].Hash == lastHash {
+			newLogs = newLogs[1:]
+		}
+		if len(newLogs) == 0 {
+			log.Println("no new commits to update")
+			return nil
+		}
+		mergeLogs = append(p.Commits, newLogs...)
+	} else {
+		// no previous logs
+		allLogs, err := gitutil.GetCommits(usrEmail, "")
+		if err != nil {
+			return fmt.Errorf("failed to get commits: %w", err)
+		}
+
+		if len(allLogs) == 0 {
+			return errors.New("no commits available")
+		}
+		mergeLogs = allLogs
 	}
 
 	tech, err := gitutil.GetStacks(usrEmail)
@@ -124,25 +163,16 @@ func SeedHook(db database.IDatabase) error {
 	}
 	techJSON, _ := json.Marshal(tech)
 	prj := git.Project{
-		Name:         filepath.Base(project),
+		Name:         prjName,
 		Path:         project,
-		Commits:      logs,
+		Commits:      mergeLogs,
 		Technologies: string(techJSON),
-	}
-
-	p, err := db.GetProjectByName(prj.Name)
-	if err != nil {
-		return err
-	}
-
-	if p.Path == project {
-		return errors.New("project already exists")
 	}
 
 	if err = db.Store(prj); err != nil {
 		return err
 	}
-	fmt.Printf("✔ Fetched %v of your commits from %v \n", len(logs), prj.Name)
+	fmt.Printf("✔ Fetched %v of your commits from %v \n", len(mergeLogs), prj.Name)
 	fmt.Printf("✔ Extracted contribution details, tech stack, and frameworks \n\n")
 	return nil
 }
@@ -152,21 +182,72 @@ func DashboardHook(db database.IDatabase) error {
 	return nil
 }
 
-func AiTestHook() error {
-	ai := ai.NewChatModel(ai.Llama)
+func AiTestHook(db database.IDatabase) error {
+	// get the AI config from yaml
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		return err
+	}
+	if len(cfg.AiOptions) == 0 {
+		return fmt.Errorf("LLM config is missing. RUN 'gitresume init'")
+	}
+	var defaultLLM config.AiOptions
+	for _, v := range cfg.AiOptions {
+		if v.IsDefault {
+			defaultLLM = v
+		}
+	}
+
+	prmps, err := db.GetLLmPromptConfig()
+
+	if err != nil {
+		return err
+	}
+
+	if len(prmps) == 0 {
+		return fmt.Errorf("custom prompt is empty, kindly run 'gitresume init' ")
+	}
+
+	prjPrt := config.CustomPrompt{}
+	for _, v := range prmps {
+		if v.Title == config.ProjectPrompt {
+			prjPrt = v
+		}
+	}
+
+	// get the prompt and replace
+	aiResp := ai.NewChatModel(ai.ModelConfig{
+		Type:        ai.ModelType(defaultLLM.Name),
+		Model:       defaultLLM.Model,
+		Temperature: prjPrt.Temperature,
+		MaxToken:    prjPrt.MaxTokens,
+		APIKey:      defaultLLM.ApiKey,
+	})
+
+	// sample commit messages
 	commits := []string{
 		"chore(database): Setup bbolt database to store commit logs",
 		"feat(api): Add new endpoint to get commit logs",
 	}
 
-	chat := "You are a professional resume writer specializing in software engineering roles. Transform git commit messages into polished resume bullet points that highlight business value and technical achievements. Use action verbs, past tense, focus on impact, and keep concise (1-2 lines max). Output format: Each bullet point according to the input"
-	msg := fmt.Sprintf(`Transform this commit message into a resume bullets point and make it concise and non-ai or non-robotic: %s`, util.ToUserContent(commits))
-	resp, err := ai.Chat([]string{chat, msg})
+	newPrompt := []config.Prompt{}
+	for _, v := range prjPrt.Prompts {
+		nCont := strings.ReplaceAll(v.Content, "%content%", util.ToUserContent(commits))
+		newPrompt = append(newPrompt, config.Prompt{
+			Role:    v.Role,
+			Content: nCont,
+		})
+	}
+
+	resp, err := aiResp.Chat(context.Background(), newPrompt)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(resp)
+	spl := strings.Join(commits, "\n")
+	fmt.Println(fmt.Sprintf("Translated\n%s ", spl))
+	output := strings.Join(resp, "\n")
+	fmt.Println(fmt.Sprintf("To:\n%s\n", output))
 	return nil
 }
 
@@ -183,15 +264,15 @@ func IsConfigInitialized() bool {
 func defaultPromptConfig() []config.CustomPrompt {
 	return []config.CustomPrompt{
 		{
-			Title:       "project",
+			Title:       config.ProjectPrompt,
 			Temperature: 0.5,
 			MaxTokens:   400,
 			Prompts: newPrompt([]string{
-				"You are an HR-trained resume assistant skilled in structuring work experiences for software engineering roles.",
-				"Write a concise 3–5 detailed bullet points for professional experiences in software engineering, focusing on measurable achievements: %content%",
+				`You are a professional resume writer specializing in software engineering roles.Transform git commit messages into polished, resume-ready bullet points that highlight technical achievements and business impact.Use strong action verbs, past tense, and concise phrasing (1–2 lines max).Do not include any introduction, summary, or explanation. Only return the bullet points, each starting with a "•"`,
+				"Transform these commit messages into 3-5 concise resume bullet points: %content%",
 			}),
 		}, {
-			Title:       "summary",
+			Title:       config.SummaryPrompt,
 			Temperature: 0.5,
 			MaxTokens:   300,
 			Prompts: newPrompt([]string{

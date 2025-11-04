@@ -40,13 +40,20 @@ type AiConfigResponse struct {
 	CustomPrompt []CustomPrompt `json:"custom_prompt"`
 }
 
+type PromptType string
+
+var (
+	ProjectPrompt PromptType = "project"
+	SummaryPrompt PromptType = "summary"
+)
+
 type CustomPrompt struct {
-	ID          int      `json:"id,omitempty"`
-	Title       string   `json:"title,omitempty"`
-	Model       string   `json:"model"`
-	Temperature float32  `json:"temperature"`
-	MaxTokens   int      `json:"max_tokens"`
-	Prompts     []Prompt `json:"prompts,omitempty"`
+	ID          int        `json:"id,omitempty"`
+	Title       PromptType `json:"title,omitempty"`
+	Model       string     `json:"model"`
+	Temperature float32    `json:"temperature"`
+	MaxTokens   int        `json:"max_tokens"`
+	Prompts     []Prompt   `json:"prompts,omitempty"`
 }
 
 type Prompt struct {
@@ -190,8 +197,8 @@ func UpdateAIConfig(conf AiOptions) error {
 // 	return SaveConfig(&cfg)
 // }
 
-func hasGitFolder(dir string) bool {
-	gitPath := filepath.Join(dir, ".git")
-	info, err := os.Stat(gitPath)
-	return err == nil && info.IsDir()
-}
+// func hasGitFolder(dir string) bool {
+// 	gitPath := filepath.Join(dir, ".git")
+// 	info, err := os.Stat(gitPath)
+// 	return err == nil && info.IsDir()
+// }

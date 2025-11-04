@@ -275,12 +275,12 @@ const LLMConfig = () => {
               }
             />
           </div>
-          <Button
+          {/* <Button
             className="bg-blue-400 text-white h-8 text-xs"
             onClick={handleAddCustomPrompt}
           >
             Add New Role <Plus />
-          </Button>
+          </Button> */}
           <div className="rounded-md bg-indigo-400 p-2 text-xs text-white my-1 flex gap-2">
             <Info /> Include %content% in one of the custom prompt role to mark
             where the platform should inject your dynamic input during LLM

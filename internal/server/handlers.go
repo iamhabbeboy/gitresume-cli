@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"embed"
 	"encoding/json"
 	"errors"
@@ -45,6 +46,7 @@ type AiRequest struct {
 	Version     string          `json:"version"`
 	Temperature float32         `json:"temperature"`
 	MaxTokens   int             `json:"max_tokens"`
+	ApiKey      string          `json:"api_key"`
 	Prompts     []config.Prompt `json:"prompts"`
 }
 
@@ -163,8 +165,6 @@ func AIConfigHandler(db database.IDatabase) http.HandlerFunc {
 			}
 		}
 
-		fmt.Println(req)
-
 		resp := Response{
 			Message: "success",
 			Status:  http.StatusCreated,
@@ -217,24 +217,19 @@ func AiHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// sys := "You are a professional resume writer specializing in software engineering roles. Transform git commit messages into polished resume bullet points that highlight business value and technical achievements. Use action verbs, past tense, focus on impact, and keep concise (1-2 lines max). Output format: Single bullet point starting with •"
-	// msg := fmt.Sprintf(`Transform this commit message into a resume bullet point: %s`, util.ToUserContent(req.Commits))
-
 	if len(req.Prompts) == 0 {
 		http.Error(w, errors.New("prompt is missing").Error(), http.StatusInternalServerError)
 		return
 	}
 
-	var sys, usr string
-	for _, v := range req.Prompts {
-		if v.Role == string(ai.System) {
-			sys = v.Content
-		} else if v.Role == string(ai.User) {
-			usr = v.Content
-		}
-	}
-	ai := ai.NewChatModel(ai.Llama)
-	resp, err := ai.Chat([]string{sys, usr})
+	provider := ai.NewChatModel(ai.ModelConfig{
+		Type:        ai.ModelType(req.Model),
+		Model:       req.Version,
+		Temperature: req.Temperature,
+		MaxToken:    req.MaxTokens,
+		APIKey:      req.ApiKey,
+	})
+	resp, err := provider.Chat(context.Background(), req.Prompts)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusMethodNotAllowed)
 		return

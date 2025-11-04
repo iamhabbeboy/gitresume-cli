@@ -30,4 +30,5 @@ export interface CustomPrompt {
   temperature?: number;
   max_tokens?: number;
   prompts: Prompt[];
+  api_key?: string;
 }
