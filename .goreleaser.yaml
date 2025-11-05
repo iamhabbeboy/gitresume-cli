@@ -72,6 +72,13 @@ builds:
       - amd64
       - arm64
 
+    # Skip ARM64 targets without proper cross-compiler setup
+    ignore:
+      - goos: windows
+        goarch: arm64
+      - goos: linux
+        goarch: arm64
+
     flags:
       - -tags=sqlite
 
