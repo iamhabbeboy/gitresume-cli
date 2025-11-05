@@ -88,3 +88,8 @@ clean:
 ## Build and run (shortcut)
 dev: build start
 
+goreleaser-test:
+	goreleaser release --snapshot --clean
+
+goreleaser-prod:
+	goreleaser release
