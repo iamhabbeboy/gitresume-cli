@@ -67,3 +67,35 @@ changelog:
     exclude:
       - "^docs:"
       - "^test:"
+
+# 🧱 Homebrew Formula
+brews:
+  - name: gitresume
+    repository:
+      owner: iamhabbeboy
+      name: homebrew-tap
+    commit_author:
+      name: Abiodun Azeez
+      email: iamhabbeboy@gmail.com
+    directory: Formula
+    homepage: "https://gitresume.app"
+    description: "A CLI tool that converts your git commit history into resume-ready bullet points using AI."
+    license: MIT
+    test: |
+      system "#{bin}/gitresume --version"
+    install: |
+      bin.install "gitresume"
+
+# 🧱 Chocolatey Package
+# chocolateys:
+#   - name: gitresume
+#     owners: iamhabbeboy
+#     title: "gitresume"
+#     summary: "Generate resume bullet points from your Git commit history using AI"
+#     description: "gitresume is a Go-based CLI tool that helps developers turn Git commits into professional resume content."
+#     project_url: "https://github.com/iamhabbeboy/gitresume-cli"
+#     license_url: "https://github.com/iamhabbeboy/gitresume-cli/blob/main/LICENSE"
+#     authors: "Abiodun Azeez"
+#     tags: "go cli resume git"
+#     api_key: "{{ .Env.CHOCOLATEY_API_KEY }}"
+#     source_repo: "https://github.com/iamhabbeboy/gitresume-cli"
