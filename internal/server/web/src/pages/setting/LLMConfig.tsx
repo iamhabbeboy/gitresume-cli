@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { baseUri, t } from "../../util/config";
 import type { OptionType } from "../../components/resume/type";
-import { ChevronDown, CircleCheck, Info, Plus } from "lucide-react";
+import { ChevronDown, CircleCheck, Info } from "lucide-react";
 import { Textarea } from "../../components/ui/Textarea";
 import type { CustomPrompt, LLmConfig, Prompt } from "../../types/ai-config";
 import { useStore } from "../../store";
@@ -142,38 +142,38 @@ const LLMConfig = () => {
     );
   };
 
-  const handleAddCustomPrompt = () => {
-    const newPromt: Prompt = {
-      role: "",
-      content: "%content%",
-    };
+  // const handleAddCustomPrompt = () => {
+  //   const newPromt: Prompt = {
+  //     role: "",
+  //     content: "%content%",
+  //   };
 
-    if (prompts.length >= 1) {
-      const isRoleFieldEmpty = prompts.some((prmpt) => prmpt.role === "");
-      const isContentFieldEmpty = prompts.some((prmpt) => prmpt.content === "");
+  //   if (prompts.length >= 1) {
+  //     const isRoleFieldEmpty = prompts.some((prmpt) => prmpt.role === "");
+  //     const isContentFieldEmpty = prompts.some((prmpt) => prmpt.content === "");
 
-      if (isRoleFieldEmpty) {
-        return t({
-          message: "The role field is required!",
-          icon: <Info />,
-        });
-      }
-      if (isContentFieldEmpty) {
-        return t({
-          message: "The content field is required!",
-          icon: <Info />,
-        });
-      }
-    }
+  //     if (isRoleFieldEmpty) {
+  //       return t({
+  //         message: "The role field is required!",
+  //         icon: <Info />,
+  //       });
+  //     }
+  //     if (isContentFieldEmpty) {
+  //       return t({
+  //         message: "The content field is required!",
+  //         icon: <Info />,
+  //       });
+  //     }
+  //   }
 
-    if (prompts.length > 3) {
-      return t({ message: "The Maximum role prompt is 3", icon: <Info /> });
-    }
+  //   if (prompts.length > 3) {
+  //     return t({ message: "The Maximum role prompt is 3", icon: <Info /> });
+  //   }
 
-    setPrompts([...prompts, newPromt]);
+  //   setPrompts([...prompts, newPromt]);
 
-    handleCollapse(prompts.length - 1);
-  };
+  //   handleCollapse(prompts.length - 1);
+  // };
 
   const availableRoles = ["system", "user", "assistant"];
   const usedRoles = prompts.map((msg) => msg.role);

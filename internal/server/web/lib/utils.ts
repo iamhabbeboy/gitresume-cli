@@ -1,7 +1,7 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import type { Technology } from "../src/pages/projects/type";
-import type { CustomPrompt, Prompt } from "../src/types/ai-config";
+import type { Prompt } from "../src/types/ai-config";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));

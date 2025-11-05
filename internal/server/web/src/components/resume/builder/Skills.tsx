@@ -1,8 +1,7 @@
-import { Grip, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useResumeStore } from "../../../store/resumeStore";
 import { Button } from "../../ui/Button";
-import { Card } from "../../ui/Card";
 import { Input } from "../../ui/Input";
 
 const SkillComponent = () => {

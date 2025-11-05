@@ -510,19 +510,6 @@ export const useResumeStore = create<ResumeState>()(
         }));
       },
       updateLinks: async (links: string[]) => {
-        const resumeId = get().resume.id;
-        const payload = {
-          links: links,
-        };
-        // try {
-        //   const request = await axios.put(
-        //     `${baseUri}/api/resumes/${resumeId}`,
-        //     payload,
-        //   );
-        //   console.log(request);
-        // } catch (e) {
-        //   console.log(e);
-        // }
         set((state) => ({
           resume: {
             ...state.resume,

@@ -90,6 +90,7 @@ builds:
         goarch: amd64
         env:
           - CC=x86_64-w64-mingw32-gcc
+          - CXX=x86_64-w64-mingw32-g++
 
 checksum:
   name_template: "checksums.txt"

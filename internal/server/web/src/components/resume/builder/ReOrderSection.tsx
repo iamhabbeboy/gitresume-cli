@@ -1,10 +1,10 @@
 import { Grip, Plus } from "lucide-react";
 import { Card } from "../../ui/Card";
 import { Reorder, useDragControls } from "motion/react";
-import type { ReOrder } from "../type";
+import type { ReOrderType } from "../type";
 import { Button } from "../../ui/Button";
 
-const ReOrderSection: React.FC<{ item: ReOrder }> = ({ item }) => {
+const ReOrderSection: React.FC<{ item: ReOrderType }> = ({ item }) => {
   const controls = useDragControls();
   return (
     <Reorder.Item
