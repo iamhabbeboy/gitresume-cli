@@ -334,20 +334,19 @@ export const useResumeStore = create<ResumeState>()(
         }
       },
       deleteVolunteer: async (id: number) => {
-        console.log(id);
-        // try {
-        //   const edu = get().resume.education ?? [];
-        //   await axios.delete(`${baseUri}/api/educations/${id}`);
-        //   const updateEdu = edu.filter((e) => e.id !== id);
-        //   set((state) => ({
-        //     resume: {
-        //       ...state.resume,
-        //       education: updateEdu,
-        //     },
-        //   }));
-        // } catch (e) {
-        //   console.log(e);
-        // }
+        try {
+          const vols = get().resume.volunteers ?? [];
+          await axios.delete(`${baseUri}/api/resumes/${id}/volunteers`);
+          const updateVol = vols.filter((e) => e.id !== id);
+          set((state) => ({
+            resume: {
+              ...state.resume,
+              volunteers: updateVol,
+            },
+          }));
+        } catch (e) {
+          console.log(e);
+        }
       },
       deleteEducation: async (id: number) => {
         try {

@@ -45,6 +45,7 @@ type IDatabase interface {
 	CreateOrUpdateVolunteering(rID int64, v []git.Volunteer) ([]int64, error)
 	CreateOrUpdateProjectOn(rID int64, v []git.ProjectWorkedOn) ([]int64, error)
 	DeleteProjectWorkedOn(pID int64) error
+	DeleteVolunteer(pID int64) error
 }
 
 type DBName string

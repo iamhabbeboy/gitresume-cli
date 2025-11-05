@@ -570,6 +570,14 @@ func (c *sqliteDB) DeleteEducation(eID int64) error {
 	return nil
 }
 
+func (c *sqliteDB) DeleteVolunteer(vID int64) error {
+	_, err := c.conn.Exec("DELETE FROM volunteering WHERE id=?", vID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (c *sqliteDB) CreateOrUpdateWorkExperiences(rID int64, w []git.WorkExperience) ([]int64, error) {
 	tx, err := c.conn.Begin()
 	if len(w) == 0 {

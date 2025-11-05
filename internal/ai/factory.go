@@ -27,6 +27,7 @@ const (
 	OpenAI      ModelType = "openai"
 	HuggingFace ModelType = "huggingface"
 	Llama       ModelType = "llama"
+	Gemini      ModelType = "gemini"
 )
 
 type Role string
@@ -51,6 +52,8 @@ func NewChatModel(cfg ModelConfig) AiModel {
 		return NewLlama(cfg)
 	case OpenAI:
 		return NewOpenAI(cfg)
+	case Gemini:
+		return NewGemini(cfg)
 	default:
 		fmt.Errorf("unsupported AI model type: %s", cfg.Type)
 	}

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Education as EducationType, Volunteer } from "../type";
+import type { Volunteer } from "../type";
 import { useResumeStore } from "../../../store/resumeStore";
 import { Label } from "@radix-ui/react-label";
 import {

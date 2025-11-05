@@ -117,7 +117,7 @@ func Serve(db database.IDatabase) {
 		case http.MethodPut:
 			CreateOrUpdateVolunteerHandler(db)(w, r)
 		case http.MethodDelete:
-			DeleteEducationHandler(db)(w, r)
+			DeleteVolunteerHandler(db)(w, r)
 		default:
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}

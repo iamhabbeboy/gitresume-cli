@@ -2,7 +2,7 @@
 
 import { Card } from "../../ui/Card";
 import { Link, Mail, MapPin, Phone } from "lucide-react";
-import { OrderLabel, type Resume } from "../type";
+import { OrderLabel, type ReOrderType, type Resume } from "../type";
 import { stripProtocol } from "../../../util/config";
 
 interface ResumePreviewProps {
@@ -103,7 +103,7 @@ export default function ResumePreview({ data, order }: ResumePreviewProps) {
       <div className="space-y-3">
         {data.project_worked_on.map((prj, i) => (
           <div key={i}>
-            <div className="flex justify-between items-start">
+            <div className="flex justify-between">
               <div>
                 <h3 className="font-semibold text-foreground">
                   {prj.title || "Title"}
@@ -112,16 +112,16 @@ export default function ResumePreview({ data, order }: ResumePreviewProps) {
                   {prj.description || "Description"}
                 </p>
                 <p className="text-xs italic">Tech: {prj.technologies}</p>
-                <span className="text-sm text-muted-foreground whitespace-nowrap">
-                  <a
-                    href={prj.link}
-                    className="underline hover:no-underline"
-                    target="_blank"
-                  >
-                    {prj.link}
-                  </a>
-                </span>
               </div>
+              <span className="text-sm text-muted-foreground whitespace-nowrap">
+                <a
+                  href={prj.link}
+                  className="underline hover:no-underline"
+                  target="_blank"
+                >
+                  {prj.link}
+                </a>
+              </span>
             </div>
           </div>
         ))}
@@ -135,7 +135,7 @@ export default function ResumePreview({ data, order }: ResumePreviewProps) {
       <div className="space-y-3">
         {data.volunteers.map((vol, i) => (
           <div key={i}>
-            <div className="flex justify-between items-start">
+            <div className="flex justify-between">
               <div>
                 <h3 className="font-semibold text-foreground">
                   {vol.title || "Title"}{" "}
@@ -145,7 +145,9 @@ export default function ResumePreview({ data, order }: ResumePreviewProps) {
                 </p>
               </div>
               <span className="text-sm text-muted-foreground whitespace-nowrap">
-                {vol.link}
+                <a href={vol.link} className="underline hover:no-underline">
+                  {vol.link ? vol.link.replace(/^https?:\/\/(www\.)?/, "") : ""}
+                </a>
               </span>
             </div>
           </div>
@@ -154,7 +156,7 @@ export default function ResumePreview({ data, order }: ResumePreviewProps) {
     </div>
   );
 
-  const sectionOrder: ReOrder[] = [
+  const sectionOrder: ReOrderType[] = [
     {
       label: OrderLabel.WorkExperience,
       component: experience,
@@ -177,9 +179,9 @@ export default function ResumePreview({ data, order }: ResumePreviewProps) {
     },
   ];
 
-  const orderedSections: ReOrder[] = order
+  const orderedSections: ReOrderType[] = order
     .map((label) => sectionOrder.find((s) => s.label === label))
-    .filter((s): s is ReOrder => Boolean(s));
+    .filter((s): s is ReOrderType => Boolean(s));
 
   return (
     <Card className="p-8 shadow-lg bg-white print:shadow-none print:border-0">

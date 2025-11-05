@@ -64,17 +64,26 @@ func SetupHook(db database.IDatabase) error {
 			Name:  userCfg["name"],
 			Email: userCfg["email"],
 		},
-		AiOptions: []config.AiOptions{{
-			Name:      string(ai.Llama),
-			Model:     "llama3.2",
-			ApiKey:    "",
-			IsDefault: true,
-		}, {
-			Name:      string(ai.OpenAI),
-			Model:     "gpt-5-mini",
-			ApiKey:    "",
-			IsDefault: false,
-		}},
+		AiOptions: []config.AiOptions{
+			{
+				Name:      string(ai.Llama),
+				Model:     "llama3.2",
+				ApiKey:    "",
+				IsDefault: true,
+			},
+			{
+				Name:      string(ai.OpenAI),
+				Model:     "gpt-5-mini",
+				ApiKey:    "",
+				IsDefault: false,
+			},
+			{
+				Name:      string(ai.Gemini),
+				Model:     "gemini-2.5-flash",
+				ApiKey:    "",
+				IsDefault: false,
+			},
+		},
 	})
 
 	if err != nil {

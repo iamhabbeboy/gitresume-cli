@@ -84,7 +84,7 @@ var seedCmd = &cobra.Command{
 		if err != nil {
 			fmt.Println(errColor("🚫 Failed to add project:", err))
 		} else {
-			fmt.Println("🎉 Successfully seeded")
+			fmt.Println("\n 🎉 Successfully seeded")
 		}
 	},
 }
