@@ -1,0 +1,55 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger only when pushing version tags, e.g., v1.0.0
+
+permissions:
+  contents: write    # Required to create releases
+  packages: write    # Optional, if you publish packages
+  actions: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ Checkout your code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2️⃣ Setup Go
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      # 3️⃣ Setup Bun for your React frontend
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+
+      # 4️⃣ Cache Bun dependencies (optional but speeds up builds)
+      - name: Cache Bun
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      # 5️⃣ Install frontend deps and build React app
+      - name: Build frontend
+        working-directory: internal/server/web
+        run: |
+          bun install
+          bun run build
+
+      # 6️⃣ Run GoReleaser
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v5
+        with:
+          version: latest
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

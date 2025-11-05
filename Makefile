@@ -92,4 +92,4 @@ goreleaser-test:
 	goreleaser release --snapshot --clean
 
 goreleaser-prod:
-	goreleaser release
+	rm -rf dist/ && goreleaser release
