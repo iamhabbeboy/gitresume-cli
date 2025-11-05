@@ -5,3 +5,5 @@ contribution.log
 **/**/.env
 gitresume.db
 .vscode/
+# Added by goreleaser init:
+dist/
