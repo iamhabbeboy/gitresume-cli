@@ -1,53 +1,108 @@
-# This is an example .goreleaser.yml file with some sensible defaults.
-# Make sure to check the documentation at https://goreleaser.com
+# version: 2
 
-# The lines below are called `modelines`. See `:help modeline`
-# Feel free to remove those if you don't want/need to use them.
-# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
-# vim: set ts=2 sw=2 tw=0 fo=cnqoj
+# before:
+#   hooks:
+#     # You may remove this if you don't use go modules.
+#     - go mod tidy
+#     # you may remove this if you don't need go generate
+#     - go generate ./...
 
+# builds:
+#   - env:
+#       - CGO_ENABLED=1
+#     goos:
+#       - linux
+#       - windows
+#       - darwin
+
+# archives:
+#   - formats: [tar.gz]
+#     # this name template makes the OS and Arch compatible with the results of `uname`.
+#     name_template: >-
+#       {{ .ProjectName }}_
+#       {{- title .Os }}_
+#       {{- if eq .Arch "amd64" }}x86_64
+#       {{- else if eq .Arch "386" }}i386
+#       {{- else }}{{ .Arch }}{{ end }}
+#       {{- if .Arm }}v{{ .Arm }}{{ end }}
+#     # use zip for windows archives
+#     format_overrides:
+#       - goos: windows
+#         formats: [zip]
+
+# changelog:
+#   sort: asc
+#   filters:
+#     exclude:
+#       - "^docs:"
+#       - "^test:"
+
+# release:
+#   footer: >-
+
+#     ---
+
+#     Released by [GoReleaser](https://github.com/goreleaser/goreleaser).
+
+# .goreleaser.yml
 version: 2
+project_name: gitresume
 
 before:
   hooks:
-    # You may remove this if you don't use go modules.
-    - go mod tidy
-    # you may remove this if you don't need go generate
-    - go generate ./...
+    # Build your React frontend before GoReleaser builds binaries
+    - echo "Building React app..."
+    - cd internal/server/web && bun run build
 
 builds:
-  - env:
+  - id: gitresume
+    main: ./main.go
+    binary: gitresume
+
+    # enable CGO and custom compilers per target
+    env:
       - CGO_ENABLED=1
+
     goos:
       - linux
-      - windows
       - darwin
+      - windows
 
-archives:
-  - formats: [tar.gz]
-    # this name template makes the OS and Arch compatible with the results of `uname`.
-    name_template: >-
-      {{ .ProjectName }}_
-      {{- title .Os }}_
-      {{- if eq .Arch "amd64" }}x86_64
-      {{- else if eq .Arch "386" }}i386
-      {{- else }}{{ .Arch }}{{ end }}
-      {{- if .Arm }}v{{ .Arm }}{{ end }}
-    # use zip for windows archives
-    format_overrides:
+    goarch:
+      - amd64
+      - arm64
+
+    flags:
+      - -tags=sqlite
+
+    ldflags:
+      - "-s -w -X main.version={{.Version}}"
+
+    # overrides per OS to use proper compiler
+    overrides:
+      - goos: linux
+        goarch: amd64
+        env:
+          - CC=x86_64-linux-musl-gcc
+        ldflags:
+          - "-s -w -linkmode external -extldflags '-static' -X main.version={{.Version}}"
       - goos: windows
-        formats: [zip]
+        goarch: amd64
+        env:
+          - CC=x86_64-w64-mingw32-gcc
+
+checksum:
+  name_template: "checksums.txt"
+
+release:
+  github:
+    owner: iamhabbeboy
+    name: gitresume
+  prerelease: auto
 
 changelog:
-  sort: asc
+  sort: desc
   filters:
     exclude:
       - "^docs:"
       - "^test:"
-
-release:
-  footer: >-
-
-    ---
-
-    Released by [GoReleaser](https://github.com/goreleaser/goreleaser).
