@@ -92,4 +92,4 @@ goreleaser-test:
 	rm -rf dist/ && goreleaser release --snapshot --clean
 
 goreleaser-prod:
-	rm -rf dist/ && goreleaser release
+	rm -rf dist/ && GITHUB_TOKEN=$(GITHUB_TOKEN) CHOCOLATEY_API_KEY=$(CHOCOLATEY_API_KEY) goreleaser release
