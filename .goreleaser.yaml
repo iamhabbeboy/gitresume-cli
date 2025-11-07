@@ -79,24 +79,34 @@ brews:
       email: iamhabbeboy@gmail.com
     directory: Formula
     homepage: "https://gitresume.app"
-    description: "A CLI tool that converts your git commit history into resume-ready bullet points using AI."
+    description: "A Resume builder CLI tool that converts your git commit history into resume-ready bullet points using AI."
     license: MIT
     test: |
       system "#{bin}/gitresume --version"
     install: |
       bin.install "gitresume"
-
+      
 publishers:
   - name: chocolatey
     cmd: |
-      echo "Packaging Chocolatey .nupkg on macOS..."
+      echo "🏗️ Packaging Windows build for Chocolatey..."
+
+      # Locate the Windows build output directory
+      WIN_DIR=$(find dist -type d -name "*_windows_*" | head -n 1)
+      if [ -z "$WIN_DIR" ]; then
+        echo "⚠️ No Windows artifact found. Skipping Chocolatey publishing."
+        exit 0
+      fi
+
       mkdir -p dist/choco
-      cp dist/gitresume_*_windows_amd64/gitresume.exe dist/choco/
+      cp "$WIN_DIR/gitresume-cli.exe" dist/choco/
+
+      echo "📦 Creating nuspec..."
       cat > dist/choco/gitresume.nuspec <<'EOF'
       <?xml version="1.0"?>
       <package>
         <metadata>
-          <id>gitresume</id>
+          <id>gitresume-cli</id>
           <version>{{ .Version }}</version>
           <authors>Abiodun Azeez</authors>
           <owners>Abiodun Azeez</owners>
@@ -108,12 +118,23 @@ publishers:
           <tags>cli git ai resume</tags>
         </metadata>
         <files>
-          <file src="gitresume.exe" target="tools" />
+          <file src="gitresume-cli.exe" target="tools" />
         </files>
       </package>
       EOF
-      cd dist/choco && zip -r gitresume.{{ .Version }}.nupkg gitresume.nuspec gitresume.exe
-      echo "Uploading to Chocolatey..."
+
+      echo "📦 Packing .nupkg..."
+      cd dist/choco
+      zip -r "gitresume-cli.{{ .Version }}.nupkg" gitresume.nuspec gitresume-cli.exe
+
+      echo "🚀 Uploading to Chocolatey..."
+      if [ -z "{{ .Env.CHOCOLATEY_API_KEY }}" ]; then
+        echo "❌ CHOCOLATEY_API_KEY not set. Skipping upload."
+        exit 0
+      fi
+
       curl -X PUT "https://push.chocolatey.org/api/v2/package" \
         -H "X-NuGet-ApiKey: {{ .Env.CHOCOLATEY_API_KEY }}" \
-        --data-binary "@gitresume.{{ .Version }}.nupkg"
+        --data-binary "@gitresume-cli.{{ .Version }}.nupkg"
+
+      echo "✅ Windows package uploaded to Chocolatey!"
