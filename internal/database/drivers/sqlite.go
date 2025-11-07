@@ -389,6 +389,7 @@ func (s *sqliteDB) CreateResume(r git.Resume) (git.Resume, error) {
 
 func (s *sqliteDB) GetResume(ID int64) (git.Resume, error) {
 	var (
+		version              sql.NullInt32
 		title                string
 		skills               sql.NullString
 		is_published         bool
@@ -407,6 +408,7 @@ func (s *sqliteDB) GetResume(ID int64) (git.Resume, error) {
 
 	query := `
 SELECT
+	resumes.version,
     resumes.title,
     resumes.skills,
     resumes.is_published,
@@ -487,7 +489,7 @@ GROUP BY resumes.id;
   `
 
 	err := s.conn.QueryRow(query, ID).
-		Scan(&title, &skills, &is_published, &name, &email, &phone, &location, &professional_summary, &links, &volunteering, &projectWorkedOn, &education, &workExperience)
+		Scan(&version, &title, &skills, &is_published, &name, &email, &phone, &location, &professional_summary, &links, &volunteering, &projectWorkedOn, &education, &workExperience)
 
 	if err == sql.ErrNoRows {
 		return git.Resume{}, errors.New("record with ID not found")
@@ -528,6 +530,7 @@ GROUP BY resumes.id;
 
 	return git.Resume{
 		ID:              ID,
+		Version:         int(version.Int32),
 		Title:           title,
 		Skills:          sk,
 		IsPublished:     is_published,

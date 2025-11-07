@@ -25,8 +25,24 @@ func SetupHook(db database.IDatabase) error {
 
 	output, err := git.RunGitCommand("", "config", "--global", "--list")
 	if err != nil {
-		return err
+		if strings.Contains(err.Error(), "unable to read config file") ||
+			strings.Contains(output, "fatal: unable to read config file") {
+			return fmt.Errorf(`Git global configuration file not found or unreadable.
+			You can create one by running:
+			git config --global user.name "Your Name"
+			git config --global user.email "you@example.com"`)
+		}
+
+		if strings.Contains(err.Error(), "exit status 1") || strings.TrimSpace(output) == "" {
+			return fmt.Errorf(`No global git configuration found.
+			Set it using:
+			git config --global user.name "Your Name"
+			git config --global user.email "you@example.com"`)
+		}
+
+		return fmt.Errorf("failed to read git config - %w", err)
 	}
+
 	cfgList := strings.Split(output, "\n")
 	userCfg := map[string]string{
 		"email": "",

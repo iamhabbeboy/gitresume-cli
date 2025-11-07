@@ -190,14 +190,15 @@ const JobWorkExperience = () => {
     const resp = await summarizeResponsibility(body);
     if (!resp.success) {
       return t({
-        message: "An error occurred while processing your request",
+        message:
+          "An error occurred while processing your request. The LLM service may not be responding.",
         icon: <Info />,
       });
     }
 
     if (data.length === 0) {
       return t({
-        message: "No response from the AI infrastucture",
+        message: "No response from the LLM service",
         icon: <Info />,
       });
     }

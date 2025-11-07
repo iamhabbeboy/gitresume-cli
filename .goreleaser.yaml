@@ -86,16 +86,34 @@ brews:
     install: |
       bin.install "gitresume"
 
-# 🧱 Chocolatey Package
-# chocolateys:
-#   - name: gitresume
-#     owners: iamhabbeboy
-#     title: "gitresume"
-#     summary: "Generate resume bullet points from your Git commit history using AI"
-#     description: "gitresume is a Go-based CLI tool that helps developers turn Git commits into professional resume content."
-#     project_url: "https://github.com/iamhabbeboy/gitresume-cli"
-#     license_url: "https://github.com/iamhabbeboy/gitresume-cli/blob/main/LICENSE"
-#     authors: "Abiodun Azeez"
-#     tags: "go cli resume git"
-#     api_key: "{{ .Env.CHOCOLATEY_API_KEY }}"
-#     source_repo: "https://github.com/iamhabbeboy/gitresume-cli"
+publishers:
+  - name: chocolatey
+    cmd: |
+      echo "Packaging Chocolatey .nupkg on macOS..."
+      mkdir -p dist/choco
+      cp dist/gitresume_*_windows_amd64/gitresume.exe dist/choco/
+      cat > dist/choco/gitresume.nuspec <<'EOF'
+      <?xml version="1.0"?>
+      <package>
+        <metadata>
+          <id>gitresume</id>
+          <version>{{ .Version }}</version>
+          <authors>Abiodun Azeez</authors>
+          <owners>Abiodun Azeez</owners>
+          <projectUrl>https://gitresume.app</projectUrl>
+          <licenseUrl>https://github.com/iamhabbeboy/gitresume/blob/main/LICENSE</licenseUrl>
+          <requireLicenseAcceptance>false</requireLicenseAcceptance>
+          <summary>CLI tool that converts git commit history into resume-ready bullet points using AI.</summary>
+          <description>GitResume transforms your git commit history into resume-ready bullet points.</description>
+          <tags>cli git ai resume</tags>
+        </metadata>
+        <files>
+          <file src="gitresume.exe" target="tools" />
+        </files>
+      </package>
+      EOF
+      cd dist/choco && zip -r gitresume.{{ .Version }}.nupkg gitresume.nuspec gitresume.exe
+      echo "Uploading to Chocolatey..."
+      curl -X PUT "https://push.chocolatey.org/api/v2/package" \
+        -H "X-NuGet-ApiKey: {{ .Env.CHOCOLATEY_API_KEY }}" \
+        --data-binary "@gitresume.{{ .Version }}.nupkg"

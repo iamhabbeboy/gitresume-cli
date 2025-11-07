@@ -1,5 +1,6 @@
 import { useLocation } from "react-router";
 import { Link } from "react-router";
+import logo from "../assets/gitresume.svg";
 
 const Header = () => {
   const location = useLocation();
@@ -9,11 +10,11 @@ const Header = () => {
         <div className="flex flex-wrap justify-between items-center mx-auto max-w-screen-xl">
           <a href="#" className="flex items-center">
             <img
-              src="/gitresume.svg"
+              src={logo}
               className="mr-3 h-6 sm:h-9 text-white invert brightness-0 sepia hue-rotate-180"
               alt="Gitresume Logo"
             />
-            <span className="self-center text-xl font-semibold whitespace-nowrap dark:text-white">
+            <span className="self-center text-xl font-semibold whitespace-nowrap dark:text-white text-white">
               GitResume
             </span>
           </a>

@@ -18,7 +18,6 @@ func (*IDocExporter) Close() error {
 }
 
 func (*IDocExporter) Export(htmlBytes []byte) ([]byte, error) {
-	// htmlBytes := []byte(c)
 	cmd := exec.Command("pandoc", "-f", "html", "-t", "docx", "-o", "-")
 	stdin, err := cmd.StdinPipe()
 	if err != nil {

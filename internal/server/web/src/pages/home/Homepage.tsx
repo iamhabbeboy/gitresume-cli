@@ -2,6 +2,7 @@ import { Brain, PencilRuler, Server, Unplug } from "lucide-react";
 import Layout from "../../components/Layout";
 import { Button } from "../../components/ui/Button";
 import { Link } from "react-router";
+import logo from "../../assets/gitresume.svg";
 
 const Homepage = () => {
   return (
@@ -9,7 +10,7 @@ const Homepage = () => {
       <section className="w-full">
         <section className="text-center w-full mb-8">
           <div>
-            <img src="/gitresume.svg" className="w-30 mx-auto" />
+            <img src={logo} className="w-30 mx-auto" />
             <h1 className="text-[44px] my-3 text-[#579da5] font-bold">
               {" "}
               GitResume Dashboard

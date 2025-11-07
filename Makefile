@@ -89,7 +89,7 @@ clean:
 dev: build start
 
 goreleaser-test:
-	goreleaser release --snapshot --clean
+	rm -rf dist/ && goreleaser release --snapshot --clean
 
 goreleaser-prod:
 	rm -rf dist/ && goreleaser release

@@ -58,8 +58,11 @@ const ResumeHeader: React.FC<Props> = ({ id, resumeHTML }) => {
       // clean up
       window.URL.revokeObjectURL(url);
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Unkonwn error";
-      console.log(message);
+      const message =
+        e instanceof Error
+          ? e.message +
+            ", Missing package detected. Please ensure all required dependencies are installed."
+          : "Unknown error";
       t({ message, icon: <Info /> });
     } finally {
       setIsDownloading(false);

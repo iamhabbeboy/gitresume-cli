@@ -203,7 +203,7 @@ const Contribution: React.FC<{ selectedProject: Prop | null }> = ({
           {tab == 1 && !commits?.length && (
             <div className="my-5">
               <h1 className="text-lg text-gray-400">
-                No translated commit messages
+                Looks like there are no AI-translated commit messages yet
               </h1>
             </div>
           )}

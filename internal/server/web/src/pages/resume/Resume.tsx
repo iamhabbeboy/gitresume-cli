@@ -33,7 +33,7 @@ const Resume: React.FC = () => {
         })),
       },
       {
-        name: "Stack",
+        name: "Skills",
         values: reverse.map((res) => ({
           value: getSkillFormat(res.skills ?? []),
         })),
@@ -44,12 +44,12 @@ const Resume: React.FC = () => {
           value: "version " + String(res.version),
         })),
       },
-      {
-        name: "Published",
-        values: reverse.map((res) => ({
-          value: res.is_published ? "Published 🚀" : "Draft",
-        })),
-      },
+      // {
+      //   name: "Published",
+      //   values: reverse.map((res) => ({
+      //     value: res.is_published ? "Published 🚀" : "Draft",
+      //   })),
+      // },
     ],
   };
   return (
