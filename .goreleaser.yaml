@@ -85,23 +85,3 @@ brews:
       system "#{bin}/gitresume --version"
     install: |
       bin.install "gitresume"
-
-chocolateys:
-  - name: gitresume
-    package_source_url: 'https://github.com/iamhabbeboy/gitresume-cli'
-    authors: iamhabbeboy
-    project_url: 'https://github.com/your-github-username/my-project'
-    project_source_url: 'https://github.com/iamhabbeboy/gitresume-cli'
-    bug_tracker_url: 'https://github.com/iamhabbeboy/gitresume-cli/issues'
-    license_url: 'https://github.com/iamhabbeboy/gitresume-cli/blob/main/LICENSE'
-    copyright: Abiodun Azeez
-    release_notes: 'https://github.com/iamhabbeboy/gitresume-cli/releases/tag/{{ .Tag }}'
-    docs_url: 'https://github.com/iamhabbeboy/gitresume-cli'
-    title: Gitresume
-    description: A CLI resume builder that transforms your Git commit history into professional, AI-generated resume bullet points.
-    summary: A CLI resume builder that transforms your Git commit history into professional, AI-generated resume bullet points.
-    icon_url: 'https://raw.githubusercontent.com/iamhabbeboy/gitresume-cli/main/internal/server/web/src/assets/icon.png'
-    tags: 'AI resume git cli tool golang'
-    owners: Abiodun Azeez
-    require_license_acceptance: false
-    api_key: '{{ .Env.CHOCOLATEY_API_KEY }}'  
