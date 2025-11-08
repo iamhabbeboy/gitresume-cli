@@ -104,13 +104,14 @@ const JobWorkExperience = () => {
       techs.push(transformObj);
     }
     const flatTechArray = techs.flat();
-    setTechStacks([...new Set([...flatTechArray])]);
+    const uniqueTech = [...new Set([...flatTechArray])];
+    setTechStacks(uniqueTech);
 
     const responsibilitiesHTML = `
     <ul>
       ${commits.map((c) => `<li>${c.message}</li>`).join("\n")}
     </ul>
-  `;
+    `;
     const update = experiences.map((exp, idx) =>
       idx === experienceIndex
         ? {
@@ -120,8 +121,10 @@ const JobWorkExperience = () => {
           }
         : exp
     );
-    const stack = [...techStacks, ...resume.skills];
-    updateSkills(_.uniq(stack));
+    const stack = [...uniqueTech, ...resume.skills];
+    const uniqStacks = [...new Set([...stack])];
+
+    updateSkills(uniqStacks);
     patchExperience(update);
   };
 

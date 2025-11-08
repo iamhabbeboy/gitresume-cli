@@ -2,6 +2,7 @@ package export
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"log"
 	"time"
@@ -51,7 +52,8 @@ func (p *IPDFExporter) Export(content []byte) ([]byte, error) {
 	var buf []byte
 	var err error
 
-	navigateURL := "data:text/html," + string(content)
+	encoded := base64.StdEncoding.EncodeToString([]byte(content))
+	navigateURL := fmt.Sprintf("data:text/html;base64,%s", encoded)
 
 	tasks := chromedp.Tasks{
 		chromedp.Navigate(navigateURL),

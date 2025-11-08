@@ -1,7 +1,7 @@
 import { toast, type ToastT } from "sonner";
 
 export const baseUri = import.meta.env.VITE_APP_API_BASE_URL as string;
-export const defaultTitle = "Job title";
+export const defaultTitle = "Click here to change role title";
 
 export const isValidUrl = (url: string): boolean => {
   try {

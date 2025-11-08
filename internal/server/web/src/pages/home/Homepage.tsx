@@ -9,16 +9,38 @@ const Homepage = () => {
     <Layout>
       <section className="w-full">
         <section className="text-center w-full mb-8">
-          <div>
+          <div className="mx-auto w-6/12">
             <img src={logo} className="w-30 mx-auto" />
             <h1 className="text-[44px] my-3 text-[#579da5] font-bold">
               {" "}
               GitResume Dashboard
             </h1>
+            <p className="my-3 text-gray-600">
+              Gitresume uses <i className="text-[#579da5]">Pandoc</i> for{" "}
+              <i>DOCX</i> generation and{" "}
+              <i className="text-[#579da5]">Headless Chrome</i> for <i>PDF</i>{" "}
+              export. Ensure{" "}
+              <a
+                href="https://pandoc.org/installing.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline hover:no-underline text-[#579da5]"
+              >
+                Pandoc
+              </a>{" "}
+              is installed locally.
+            </p>
+            <a
+              href="https://gitresume.app"
+              target="_blank"
+              className="underline hover:no-underline text-gray-500 "
+            >
+              Website
+            </a>
             <a
               href="https://forms.gle/EFdTiSLkxsXxoxDd9"
               target="_blank"
-              className="underline hover:no-underline text-gray-500"
+              className="underline hover:no-underline text-gray-500 ml-3"
             >
               Give feedback
             </a>

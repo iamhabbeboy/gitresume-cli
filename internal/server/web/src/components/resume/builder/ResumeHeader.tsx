@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useResumeStore } from "../../../store/resumeStore";
 import { prependTailwindHTMLForExport } from "../../../../lib/utils";
 import axios from "axios";
@@ -87,6 +87,23 @@ const ResumeHeader: React.FC<Props> = ({ id, resumeHTML }) => {
       setIsLoadingDuplicate(false);
     }
   };
+  const inputRef = useRef<HTMLDivElement | null>(null);
+  const [value, setValue] = useState("");
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        inputRef.current &&
+        !inputRef.current.contains(event.target as Node)
+      ) {
+        if (isEditable) {
+          handleChangeTitle(value);
+        }
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isEditable, value]);
 
   return (
     <header className="bg-background sticky top-0 z-10 flex">
@@ -97,10 +114,17 @@ const ResumeHeader: React.FC<Props> = ({ id, resumeHTML }) => {
                   ? "border-b border-border border-gray-500 bg-gray-100"
                   : "border-transparent bg-white cursor-pointer"
               }`}
+        ref={inputRef}
         contentEditable={isEditable}
         suppressContentEditableWarning={true}
         onClick={() => !isEditable && setIsEditable(true)}
-        onBlur={() => setIsEditable(false)}
+        onBlur={(e) => {
+          setIsEditable(false);
+          setValue(e.currentTarget.textContent as string);
+        }}
+        onInput={(e) => {
+          setValue(e.currentTarget.textContent as string);
+        }}
         data-placeholder="Type here..."
         title="Click to edit"
         onKeyDown={(e) => {

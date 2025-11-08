@@ -158,16 +158,16 @@ export default function ResumePreview({ data, order }: ResumePreviewProps) {
 
   const sectionOrder: ReOrderType[] = [
     {
+      label: OrderLabel.Skills,
+      component: skills,
+    },
+    {
       label: OrderLabel.WorkExperience,
       component: experience,
     },
     {
       label: OrderLabel.Education,
       component: education,
-    },
-    {
-      label: OrderLabel.Skills,
-      component: skills,
     },
     {
       label: OrderLabel.Projects,

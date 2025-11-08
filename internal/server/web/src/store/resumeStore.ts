@@ -19,7 +19,6 @@ interface ResumeState {
   error: string | null;
   updateProfile: (profile: Profile) => void;
   updateWorkExperience: (workExperience: WorkExperience) => void;
-  addWorkExperiences: (wk: WorkExperience[], prjIDs: string[]) => void;
   store: (data: Record<string, unknown>) => void;
   fetchResumes: () => Promise<Resume[]>;
   fetchUser: (userId: number) => Promise<Profile | null>;
@@ -164,36 +163,6 @@ export const useResumeStore = create<ResumeState>()(
             ),
           },
         })),
-      addWorkExperiences: (
-        workExperiences: WorkExperience[],
-        prjIDs: string[]
-      ) => {
-        const newExp = workExperiences.map((wk) => ({
-          company: wk.company,
-          role: wk.role,
-          location: wk.location,
-          start_date: wk.start_date,
-          end_date: wk.end_date,
-          project_ids: prjIDs,
-        }));
-
-        const payload = {
-          work_experiences: newExp,
-          skills: ["PHP", "Nodejs", "Golang"],
-        };
-        const resp = get().store(payload);
-        console.log(resp);
-
-        set((state) => ({
-          resume: {
-            ...state.resume,
-            workExperiences: [
-              ...state.resume.work_experiences,
-              ...workExperiences,
-            ],
-          },
-        }));
-      },
       store: async (data: Partial<Resume>) => {
         const payload: Partial<Resume> = {
           user_id: data.user_id ?? 1,
@@ -394,7 +363,9 @@ export const useResumeStore = create<ResumeState>()(
           );
           const ids = request.data.data.ids;
           const hasId = ids.every((id: number) => id === 0);
-          if (hasId) alert("An error occured while saving");
+          if (hasId) {
+            return false;
+          }
           const updateExperienceIds = exp.map((p, i) => ({ ...p, id: ids[i] }));
 
           set((state) => ({
@@ -452,8 +423,6 @@ export const useResumeStore = create<ResumeState>()(
             `${baseUri}/api/resumes/${resumeId}/volunteers`,
             { volunteers: vol }
           );
-
-          console.log(request.data);
           const ids = request.data.data.ids;
           const updateIds = vol.map((p, i) => ({ ...p, id: ids[i] }));
 
@@ -494,11 +463,7 @@ export const useResumeStore = create<ResumeState>()(
           skills: skills,
         };
         try {
-          const request = await axios.put(
-            `${baseUri}/api/resumes/${resumeId}`,
-            payload
-          );
-          console.log(request);
+          await axios.put(`${baseUri}/api/resumes/${resumeId}`, payload);
         } catch (e) {
           console.log(e);
         }

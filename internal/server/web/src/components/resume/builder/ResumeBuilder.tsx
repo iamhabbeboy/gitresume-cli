@@ -45,6 +45,10 @@ export default function ResumeBuilder() {
 
   const sections: ReOrderType[] = [
     {
+      label: OrderLabel.Skills,
+      component: <SkillComponent />,
+    },
+    {
       label: OrderLabel.WorkExperience,
       addEvent: addExperience,
       component: <JobWorkExperience />,
@@ -53,10 +57,6 @@ export default function ResumeBuilder() {
       label: OrderLabel.Education,
       addEvent: addEducation,
       component: <Education />,
-    },
-    {
-      label: OrderLabel.Skills,
-      component: <SkillComponent />,
     },
     {
       label: OrderLabel.Projects,

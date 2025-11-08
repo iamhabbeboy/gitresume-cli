@@ -132,10 +132,7 @@ const Contribution: React.FC<{ selectedProject: Prop | null }> = ({
             </h1>
 
             <Button className=" text-white mt-5 cursor-pointer bg-cyan-600 hover:bg-cyan-500">
-              <a
-                href="https://gitresume.app/git-integration"
-                className="flex gap-3"
-              >
+              <a href="https://gitresume.app/wait-list" className="flex gap-3">
                 <ImportIcon /> Import from Github
               </a>
             </Button>
