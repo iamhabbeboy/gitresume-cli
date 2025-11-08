@@ -79,62 +79,29 @@ brews:
       email: iamhabbeboy@gmail.com
     directory: Formula
     homepage: "https://gitresume.app"
-    description: "A Resume builder CLI tool that converts your git commit history into resume-ready bullet points using AI."
+    description: "A CLI resume builder that transforms your Git commit history into professional, AI-generated resume bullet points"
     license: MIT
     test: |
       system "#{bin}/gitresume --version"
     install: |
       bin.install "gitresume"
-      
-publishers:
-  - name: chocolatey
-    cmd: |
-      echo "🏗️ Packaging Windows build for Chocolatey..."
 
-      # Locate the Windows build output directory
-      WIN_DIR=$(find dist -type d -name "*_windows_*" | head -n 1)
-      if [ -z "$WIN_DIR" ]; then
-        echo "⚠️ No Windows artifact found. Skipping Chocolatey publishing."
-        exit 0
-      fi
-
-      mkdir -p dist/choco
-      cp "$WIN_DIR/gitresume-cli.exe" dist/choco/
-
-      echo "📦 Creating nuspec..."
-      cat > dist/choco/gitresume.nuspec <<'EOF'
-      <?xml version="1.0"?>
-      <package>
-        <metadata>
-          <id>gitresume-cli</id>
-          <version>{{ .Version }}</version>
-          <authors>Abiodun Azeez</authors>
-          <owners>Abiodun Azeez</owners>
-          <projectUrl>https://gitresume.app</projectUrl>
-          <licenseUrl>https://github.com/iamhabbeboy/gitresume/blob/main/LICENSE</licenseUrl>
-          <requireLicenseAcceptance>false</requireLicenseAcceptance>
-          <summary>CLI tool that converts git commit history into resume-ready bullet points using AI.</summary>
-          <description>GitResume transforms your git commit history into resume-ready bullet points.</description>
-          <tags>cli git ai resume</tags>
-        </metadata>
-        <files>
-          <file src="gitresume-cli.exe" target="tools" />
-        </files>
-      </package>
-      EOF
-
-      echo "📦 Packing .nupkg..."
-      cd dist/choco
-      zip -r "gitresume-cli.{{ .Version }}.nupkg" gitresume.nuspec gitresume-cli.exe
-
-      echo "🚀 Uploading to Chocolatey..."
-      if [ -z "{{ .Env.CHOCOLATEY_API_KEY }}" ]; then
-        echo "❌ CHOCOLATEY_API_KEY not set. Skipping upload."
-        exit 0
-      fi
-
-      curl -X PUT "https://push.chocolatey.org/api/v2/package" \
-        -H "X-NuGet-ApiKey: {{ .Env.CHOCOLATEY_API_KEY }}" \
-        --data-binary "@gitresume-cli.{{ .Version }}.nupkg"
-
-      echo "✅ Windows package uploaded to Chocolatey!"
+chocolateys:
+  - name: gitresume
+    package_source_url: 'https://github.com/iamhabbeboy/gitresume-cli'
+    authors: iamhabbeboy
+    project_url: 'https://github.com/your-github-username/my-project'
+    project_source_url: 'https://github.com/iamhabbeboy/gitresume-cli'
+    bug_tracker_url: 'https://github.com/iamhabbeboy/gitresume-cli/issues'
+    license_url: 'https://github.com/iamhabbeboy/gitresume-cli/blob/main/LICENSE'
+    copyright: Abiodun Azeez
+    release_notes: 'https://github.com/iamhabbeboy/gitresume-cli/releases/tag/{{ .Tag }}'
+    docs_url: 'https://github.com/iamhabbeboy/gitresume-cli'
+    title: Gitresume
+    description: A CLI resume builder that transforms your Git commit history into professional, AI-generated resume bullet points.
+    summary: A CLI resume builder that transforms your Git commit history into professional, AI-generated resume bullet points.
+    icon_url: 'https://raw.githubusercontent.com/iamhabbeboy/gitresume-cli/main/internal/server/web/src/assets/icon.png'
+    tags: 'AI resume git cli tool golang'
+    owners: Abiodun Azeez
+    require_license_acceptance: false
+    api_key: '{{ .Env.CHOCOLATEY_API_KEY }}'  
