@@ -17,9 +17,9 @@ curl -L "$URL" -o "$TMPDIR/gitresume-cli.tar.gz"
 tar -xzf "$TMPDIR/gitresume-cli.tar.gz" -C "$TMPDIR"
 
 # Move to /usr/local/bin
-sudo mv "$TMPDIR/gitresume-cli" /usr/local/bin/
+sudo mv "$TMPDIR/gitresume" /usr/local/bin/
 
 # Clean up
 rm -rf "$TMPDIR"
 
-echo "gitresume-cli $VERSION installed successfully!"
+echo "gitresume $VERSION installed successfully!"
