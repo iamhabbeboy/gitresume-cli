@@ -40,7 +40,7 @@ rm gitresume-cli.tar.gz
 
 **Windows (Chocolatey)**
 ```bash
-$ choco install gitresume
+$ choco install gitresume --version=0.1.0
 ```
 
 Usage
