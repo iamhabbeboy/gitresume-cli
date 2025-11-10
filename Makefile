@@ -88,8 +88,8 @@ clean:
 ## Build and run (shortcut)
 dev: build start
 
-goreleaser-test:
+goreleaser-test: build-react
 	rm -rf dist/ && goreleaser release --snapshot --clean
 
-goreleaser-prod:
+goreleaser-prod: build-react
 	rm -rf dist/ && GITHUB_TOKEN=$(GITHUB_TOKEN) CHOCOLATEY_API_KEY=$(CHOCOLATEY_API_KEY) goreleaser release
