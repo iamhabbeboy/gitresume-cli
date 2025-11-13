@@ -67,7 +67,7 @@ var completionCmd = &cobra.Command{
 
 var initCmd = &cobra.Command{
 	Use:   "init",
-	Short: "Add project to your gitresume",
+	Short: "Initialize gitresume config",
 	Run: func(cmd *cobra.Command, args []string) {
 		err := commands.SetupHook(db)
 		if err != nil {
@@ -91,7 +91,7 @@ var seedCmd = &cobra.Command{
 
 var dashboardCmd = &cobra.Command{
 	Use:   "serve",
-	Short: "Web dashboard for your dev report",
+	Short: "Web dashboard for managing your resumes",
 	Run: func(cmd *cobra.Command, args []string) {
 		commands.DashboardHook(db)
 		// if err != nil {
